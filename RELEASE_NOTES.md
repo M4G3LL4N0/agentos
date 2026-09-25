@@ -46,4 +46,37 @@ RELEASE_VERSION: 0.5.0 (`pyproject.toml`, package metadata, CLI, MCP import path
 
 RELEASE_GATE: PASS for the local AgentOS code gate: 710/710 tests passed with 0 failures, 0 errors, and 0 skips; fresh CLI, benchmark, backup, doctor, source, and bytecode checks are green. The dedicated public remote and GitHub Actions validation are verified in `PUBLICATION_AUDIT.md`.
 
-NEXT: create the v0.5.0 tag and GitHub release from the final verified commit; do not deploy.
+## Release highlights
+
+### Architecture
+
+AgentOS is a provider-neutral execution and orchestration control plane. CLI, loopback HTTP, and MCP stdio share `services.AgentOS`; SQLite persistence, capability discovery, bounded adapters, verification, and recovery sit behind one core. GrokBot Office remains a separate workforce configuration layer, not an AgentOS dependency.
+
+### Efficiency and ResourceGovernor
+
+The engine uses exact cache, deterministic and state fast paths, verified workflow reuse, compact deltas, and smallest-capable-team planning. `ResourceGovernor` constrains live eligibility, specialist fan-out, groups, routines, and experimental work from recorded usage signals; it never fabricates usage or authorizes spend.
+
+### Federation, A2A, and MCP
+
+Executor cells, typed job/result envelopes, plan-before-premium routing, bounded failover, and the read-only GrokBot Office bridge are implemented and tested. A2A v1 discovery/interop and MCP candidate discovery/certification are explicit lifecycle surfaces; remote peers and MCP transports remain unconfigured until reviewed credentials and approvals exist.
+
+### Verification and learning
+
+The local release gate is 710/710 tests with zero failures, errors, or skips. Verification selects bounded retry, alternate, supervisor, or human paths; cache, coach lessons, workflow maturity, executor metrics, learned routing, fleet incidents, routines, and job traces persist as measured state.
+
+### Limitations
+
+LIVE provider calls, production API authentication, execution sandboxing, a first-class MCP client, and live external-worker claims are not part of this release. A capability marked AVAILABLE is not proof of a live external execution.
+
+### Setup
+
+```bash
+git clone https://github.com/M4G3LL4N0/agentos.git
+cd agentos
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -e .
+.venv/bin/python -m unittest discover -s tests
+.venv/bin/agentos init
+```
+
+NEXT: the public v0.5.0 release is published from the verified code commit; no deployment is authorized.
