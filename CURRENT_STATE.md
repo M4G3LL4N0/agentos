@@ -1,6 +1,6 @@
 # AgentOS Current State
 
-Living document — reflects reality as of 2026-09-24 (v0.5.0 release gate PASS; 710 tests green; publication preparation is complete for the dedicated public remote).
+Living document — reflects reality as of 2026-09-25 (v0.5.0 release gate PASS; 710 tests green; public remote and CI verified).
 If this file and behaviour disagree, behaviour wins; fix this file.
 
 ## Status: genuinely useful universal Agent Engine (local)
@@ -38,8 +38,9 @@ failure with recovery, a policy refusal, and restart persistence.
   0 errors, 0 skips**. Editable package and CLI report **0.5.0**. Fresh CLI
   smoke, 11-task benchmark, backup inspect/dry-run, doctor, source, and bytecode
   audits are green. The local release gate is **PASS**. The dedicated public
-  remote and release tag will be verified in `PUBLICATION_AUDIT.md`; no paid
-  provider, GrokBot, deployment, or publication-side execution was used.
+  remote and CI are verified in `PUBLICATION_AUDIT.md`; the v0.5.0 release tag
+  is created separately from the final verified commit. No paid provider,
+  GrokBot, deployment, or publication-side execution was used.
 
 ## Resource Governor + supervisor operating model (IMPLEMENTED + VERIFIED, 2026-09-22, +26 tests)
 

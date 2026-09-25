@@ -35,8 +35,7 @@ Part B (v0.2.0):
 - [x] v0.5.0 local release gate PASS: 710 tests, 0 failures, 0 errors, 0 skips;
       post-fix redaction, backup, malformed-state, and learned-routing persistence
       regressions covered.
-- [ ] Publication remains pending verification of the dedicated public remote;
-  no deployment is authorized.
+- [x] Dedicated public remote created, pushed, and verified; no deployment is authorized.
 
 ## Learning execution lifecycle (v0.5.0, 710 tests, 2026-09-24)
 

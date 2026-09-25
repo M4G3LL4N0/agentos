@@ -44,6 +44,6 @@ PYC_SOURCE_STATUS: 69 first-party `.py` sources; 69 current CPython 3.12 caches;
 
 RELEASE_VERSION: 0.5.0 (`pyproject.toml`, package metadata, CLI, MCP import path, and local A2A default).
 
-RELEASE_GATE: PASS for the local AgentOS code gate: 710/710 tests passed with 0 failures, 0 errors, and 0 skips; fresh CLI, benchmark, backup, doctor, source, and bytecode checks are green. The dedicated public remote and GitHub release verification are tracked in `PUBLICATION_AUDIT.md`.
+RELEASE_GATE: PASS for the local AgentOS code gate: 710/710 tests passed with 0 failures, 0 errors, and 0 skips; fresh CLI, benchmark, backup, doctor, source, and bytecode checks are green. The dedicated public remote and GitHub Actions validation are verified in `PUBLICATION_AUDIT.md`.
 
-NEXT: run the publication gates, create the dedicated public remote, push `main`, and verify the v0.5.0 release; do not deploy.
+NEXT: create the v0.5.0 tag and GitHub release from the final verified commit; do not deploy.
