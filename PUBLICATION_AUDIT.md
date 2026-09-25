@@ -31,6 +31,7 @@ The release boundary excludes virtual environments, caches, SQLite files, local 
 - [x] No private path or live-worker claim in the public surface.
 - [x] Dedicated public remote created, pushed, and verified.
 - [x] GitHub Actions validation passed on the verified code commit.
-- [ ] v0.5.0 release tag and GitHub release created from the final verified commit.
+- [x] v0.5.0 release tag and GitHub release created from verified commit `8ff9c081b69ce5e15e89a95b80f7ce532705dc0a`.
+- Release: https://github.com/M4G3LL4N0/agentos/releases/tag/v0.5.0
 
 No local validation result is evidence of a live external worker or paid provider call.
