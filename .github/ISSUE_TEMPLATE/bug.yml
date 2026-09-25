@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible AgentOS behavior problem.
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give the smallest command or objective that reproduces the issue. Do not include secrets or private paths.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: AgentOS version
+    validations:
+      required: true

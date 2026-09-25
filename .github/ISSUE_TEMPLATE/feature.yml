@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a bounded AgentOS capability or documentation improvement.
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User outcome
+      description: Describe the smallest useful outcome and why it belongs in the provider-neutral core.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification evidence
+      description: Define the tests or local evidence required before this can be called verified.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Safety and status boundary
+      description: State whether the proposal is optional, unconfigured, experimental, or planned.
+    validations:
+      required: true
