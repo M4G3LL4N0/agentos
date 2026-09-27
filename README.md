@@ -2,6 +2,8 @@
 
 > **A universal, provider-neutral AI Agent Engine that turns objectives into verified outcomes at the lowest responsible cost.**
 
+Public site: https://agentos-website-ten.vercel.app
+
 AgentOS is the generic execution and orchestration engine. It accepts an objective, inspects the current state, discovers capabilities, plans a bounded route, executes through an adapter, verifies the result, persists evidence, and decides what to do next. Humans and AI systems can use the same core through the CLI, loopback HTTP API, or MCP stdio.
 
 AgentOS is intentionally not a fixed swarm, an operating system, or a provider account. It is the substrate that lets a workforce stay replaceable while control, verification, and learning remain durable.
