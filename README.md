@@ -1,5 +1,9 @@
 # AgentOS
 
+<p align="center">
+  <img src="assets/social-card.png" alt="AgentOS" width="100%">
+</p>
+
 > **A universal, provider-neutral AI Agent Engine that turns objectives into verified outcomes at the lowest responsible cost.**
 
 Public site: https://agentos-website-ten.vercel.app
