@@ -224,6 +224,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8765)
 
+    sub.add_parser("workers", help="list hive workers")
+    sub.add_parser("providers", help="list AI mesh providers")
+    p_logs = sub.add_parser("logs", help="show recent events")
+    p_logs.add_argument("--limit", type=int, default=50)
+
     p_mcp = sub.add_parser("mcp", help="MCP candidate lifecycle (or serve stdio)")
     mcp_sub = p_mcp.add_subparsers(dest="mcp_command", required=False)
     p_mdiscover = mcp_sub.add_parser(
@@ -712,6 +717,12 @@ def dispatch(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
         return cmd_delegate(app, args, as_json)
     if cmd == "serve":
         return cmd_serve(app, args, as_json)
+    if cmd == "workers":
+        return cmd_workers(app, args, as_json)
+    if cmd == "providers":
+        return cmd_providers(app, args, as_json)
+    if cmd == "logs":
+        return cmd_logs(app, args, as_json)
     if cmd == "mcp":
         return cmd_mcp(app, args, as_json)
     if cmd == "ecosystem":
@@ -1116,6 +1127,55 @@ def cmd_recover(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
 
 def cmd_events(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
     events = app.events(objective_id=args.objective, limit=args.limit)
+    if as_json:
+        return emit_json({"ok": True, "events": events})
+    if not events:
+        print("no events recorded")
+        return 0
+    for event in events:
+        scope = event.get("objective_id") or "-"
+        print(f"{event['created_at']}  {event['event_type']:<24} {scope}")
+    return 0
+
+
+def cmd_workers(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
+    from agentos.adapters.hive import HiveAdapter
+
+    adapter = HiveAdapter()
+    workers = adapter.discover_workers()
+    if as_json:
+        return emit_json({"ok": True, "workers": workers})
+    if not workers:
+        print("no active workers")
+        return 0
+    for w in workers:
+        print(
+            f"{w['system_id']:<20} workers={w['active_workers']} "
+            f"priority={w['priority']}"
+        )
+    return 0
+
+
+def cmd_providers(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
+    from agentos.adapters.ai_mesh import AIMeshAdapter
+
+    adapter = AIMeshAdapter()
+    providers = adapter.discover_providers()
+    if as_json:
+        return emit_json({"ok": True, "providers": providers})
+    if not providers:
+        print("no providers detected")
+        return 0
+    for p in providers:
+        print(
+            f"{p['id']:<15} [{p['state']}] cost_rank={p['cost_rank']} "
+            f"free={p['free']}"
+        )
+    return 0
+
+
+def cmd_logs(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
+    events = app.events(limit=args.limit)
     if as_json:
         return emit_json({"ok": True, "events": events})
     if not events:

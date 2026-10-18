@@ -1,0 +1,9 @@
+#!/bin/bash
+# noaerth agentos — delegate to AgentOS CLI
+# Usage: noaerth agentos <command> [args]
+set -euo pipefail
+
+AGENTOS_HOME="${AGENTOS_HOME:-/srv/noaerth/agentos}"
+export AGENTOS_HOME
+
+exec agentos "$@"
