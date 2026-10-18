@@ -1,0 +1,25 @@
+[Unit]
+Description=AgentOS Execution Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=agentos
+Group=agentos
+WorkingDirectory=/srv/noaerth/agentos
+Environment=AGENTOS_HOME=/srv/noaerth/agentos
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 -m agentos serve --host 127.0.0.1 --port 8765
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agentos
+
+[Install]
+WantedBy=multi-user.target
