@@ -212,15 +212,24 @@ class TestTowerBounds(unittest.TestCase):
         self.assertTrue(any(y == 23 for y, x, t in scr.writes))
 
     def test_raw_screen_raises_without_proxy(self) -> None:
-        # documents the vulnerability the proxy fixes: raw addstr on an
-        # overflowing 24-row screen must raise curses.error
+        # documents the vulnerability the proxy fixes: a section entering
+        # near the bottom row overflows deterministically on a raw screen
         import curses
 
-        data = self.tower._collect_data()
+        data = {
+            "activity": [
+                {
+                    "created_at": "2026-01-01T00:00:00+00:00",
+                    "event_type": "objective.started",
+                    "objective_id": "obj_" + "a" * 20,
+                }
+                for _ in range(6)
+            ]
+        }
         scr = FakeScr(24, 80)
         with patch.object(curses, "color_pair", return_value=0):
             with self.assertRaises(curses.error):
-                self.tower._draw_main(scr, data)
+                self.tower._draw_activity(scr, data, 23, 80)
 
     def test_swallow_write_errors_only(self) -> None:
         import curses
