@@ -239,9 +239,13 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
       free-only defaults, no secret keys, bounded state, no shell=True)
 - [x] Docs: CURRENT_STATE, EXECUTION_LOG, DECISIONS (D-Phase2-*),
       ARCHITECTURE module map, README commands, this map
-- [ ] Live demo on server (`agentos tower`, loop demo objective, restart
-      persistence) — BLOCKED: host `100.127.182.126` unreachable (SSH
-      timeouts); Phase 1 deployment state unchanged
+- [x] Live demo on server (`deploy/sync-phase2.sh`): 837 server-side tests
+      OK; loop demo `obj_28205e0be7f2` COMPLETED+VERIFIED (all 9 stages);
+      tower live frame over PTY; workers/providers/logs honest; service
+      restart persistence proven
+- [x] Two live-found defects fixed: janitor real `admit` payload mismatch
+      (mocked shape had hidden it), tower 24-row overflow crash
+      (`_SafeScr` proxy + section truncation)
 
 ## NEXT (highest leverage first)
 

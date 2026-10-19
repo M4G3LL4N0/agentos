@@ -51,7 +51,14 @@ noaerth agentos tower          # needs a TTY; SSH in and run directly
 
 ## Phase 2 status (2026-10-19)
 
-- Live demo on this host pending: host was unreachable during the Phase 2
-  session (SSH timeouts). Phase 1 deployment state is presumed unchanged
-  and must be re-verified (`systemctl is-active agentos`, health probe)
-  before the demo.
+- Live demo COMPLETE: 837 server-side tests OK; loop demo objective
+  `obj_28205e0be7f2` COMPLETED+VERIFIED (all 9 stages); tower rendered a
+  live PTY frame; service restart persistence proven.
+- Incident: a first `rsync --delete` sync removed live state (`agentos.db`,
+  `state/`, `logs/`) and broke ownership; service crash-looped until
+  `chown -R agentos:agentos` + recreated dirs. `sync-phase2.sh` no longer
+  uses `--delete` and excludes state paths.
+- Operator follow-up: ~396 `/tmp/tmp*` agentos test homes (~724M) from test
+  runs; disk 87% used. Cleanup command (authorized by operator only):
+  `find /tmp -maxdepth 1 -name 'tmp*' -user root -mtime +0 -exec rm -rf {} +`
+  — verify each dir contains only `agentos.db`/test state first.

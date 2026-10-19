@@ -39,8 +39,13 @@ failure with recovery, a policy refusal, and restart persistence.
   (`test_phase2_security.py`) locks in fail-closed cancel, free-only defaults,
   bounded state, and no-secret key files.
 - Server: Phase 1 deployment (`agentos.service`, `noaerth agentos` wrapper,
-  `http://127.0.0.1:8765/health`) remains the deployment target; Phase 2 live
-  demo pending server reachability (see EXECUTION_LOG).
+  `http://127.0.0.1:8765/health`) verified with the Phase 2 live demo —
+  server-side suite 837 OK, loop demo objective COMPLETED+VERIFIED, tower
+  rendered a live PTY frame, restart persistence proven. One incident: a
+  first sync with `rsync --delete` destroyed Phase 1 server state
+  (`agentos.db`, `state/`, `logs/`; record `obj_91c25855be10` unrecoverable,
+  no backups existed); service rebuilt fresh after ownership fix, and the
+  sync script now forbids `--delete` (see EXECUTION_LOG).
 
 ## Learning execution release (LOCAL GATE PASS, v0.5.0, 710 tests)
 

@@ -437,3 +437,46 @@ and repaired cli.py (recorded verbatim — see CURRENT_STATE.md):
   (100% ICMP loss, SSH timeouts ×5). Phase 1 deployment state is unchanged
   and remains the demo target once the host is reachable. No deploy attempted.
 - Paid provider calls: 0. GrokBot tasks: 0. Pushes: 0. Destructive cleanup: 0.
+
+## 2026-10-19 — Phase 2 live demo on server + two live-found defects fixed
+
+- Host recovered at 17:10 UTC+2 after ~35 min unreachable (tailscaled data
+  plane down; control plane stale). Demo proceeded.
+- Deploy via `deploy/sync-phase2.sh`: rsync + server-side suite
+  **837 tests OK (≈159s)** + restart + health `{"ok":true,...,"version":"0.5.0"}`.
+- Demo runs (all real, on the server):
+  - `agentos init` fresh home: 13 capabilities discovered.
+  - `agentos workers` → "no active workers" (honest, no fakes);
+    `agentos providers` → `opencode [READY] cost_rank=1 free=True`.
+  - Autonomous loop on `obj_28205e0be7f2`: INSPECT→PLAN→DECOMPOSE→ROUTE→
+    DELEGATE→EXECUTE→VERIFY→REVIEW→COMPLETE all ok, final
+    **COMPLETED / VERIFIED**, `loop_state.json` written.
+  - Tower rendered a full live frame over a PTY (SIGKILL at 6s, exit 137):
+    SYSTEM (service active, load, DB 4KB, health ok), OBJECTIVES (both demo
+    objectives listed), HIVE (no active workers), PROVIDERS, RESOURCES
+    (CPU/MEM/Disk 86.6%), footer keys. VERIFICATION/ACTIVITY truncated
+    cleanly on the 24-row PTY by design.
+  - `systemctl restart` → active + healthy; objectives and loop_state
+    survived (persistence proven).
+- **Incident 1 (self-inflicted, fixed):** first sync used `rsync --delete`,
+  which deleted server-only live state (`agentos.db`, `state/`, `logs/`)
+  and broke ownership (files uid 501 vs service user `agentos`). Service
+  crash-looped with `sqlite3: unable to open database file`. Phase 1 demo
+  objective record `obj_91c25855be10` is unrecoverable (no backups existed
+  on the host); AutonomousOS/Hive state under `/srv/noaerth/autonomousos`
+  was untouched. Recovery: recreated dirs, `chown -R agentos:agentos`,
+  service healthy, `agentos init` rebuilt fresh state. `sync-phase2.sh`
+  rewritten: `--delete` removed, state paths excluded, ownership fix +
+  health wait loop added.
+- **Defect 2 (live-found):** janitor adapter checked for an `ok` key but
+  real `janitor space admit --json` returns `{"admit": true, ...}` — every
+  DELEGATE admission failed ("janitor call failed"). Phase 1 tests had
+  mocked the fabricated shape. Fixed to accept the real payload, deny on
+  `admit:false`, fail closed on unrecognised shapes; +3 tests (837 total).
+- **Defect 3 (live-found):** tower crashed on a 24-row PTY
+  (`addwstr() returned ERR` in `_draw_verification`) — sections overflowed
+  the screen. Fixed with a bounds-safe `_SafeScr` proxy (write errors
+  swallowed) + section truncation at the footer row; +4 tests.
+- Disk: 87% used; 396 `/tmp/tmp*` agentos test homes (~724M) left by test
+  runs — flagged for operator-authorized cleanup, not removed.
+- Paid provider calls: 0. Pushes: 0.
