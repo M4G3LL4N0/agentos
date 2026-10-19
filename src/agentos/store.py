@@ -801,6 +801,10 @@ class Store:
         rows = self.conn.execute(sql, params).fetchall()
         return [self._objective_from_row(r) for r in rows]
 
+    def count_objectives(self) -> int:
+        row = self.conn.execute("SELECT COUNT(*) FROM objectives").fetchone()
+        return int(row[0]) if row else 0
+
     # ------------------------------------------------------------------
     # capabilities
     # ------------------------------------------------------------------
@@ -1018,6 +1022,10 @@ class Store:
         params.append(limit)
         rows = self.conn.execute(sql, params).fetchall()
         return [self._event_from_row(r) for r in rows]
+
+    def count_events(self) -> int:
+        row = self.conn.execute("SELECT COUNT(*) FROM events").fetchone()
+        return int(row[0]) if row else 0
 
     # ------------------------------------------------------------------
     # verification results
