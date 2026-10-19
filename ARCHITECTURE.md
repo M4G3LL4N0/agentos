@@ -59,6 +59,15 @@ Evaluation Layer     verify.Verifier (+ quality) · recovery strategies
 | `adapters/grok.py` | Single-turn `grok -p` execution; never escalates permissions. |
 | `adapters/openclaw.py` | `openclaw agent --message --json` turns; `--deliver` never set. |
 | `adapters/langgraph.py` | Reserved boundary; reports UNAVAILABLE until installed. |
+| `adapters/hive.py` | Hive delegation boundary: submit/route jobs, inspect worker/provider state; read-only discovery unless explicitly instructed. |
+| `adapters/janitor.py` | JanitorOS disk/storage admission: capacity probe, admission requests, fail-closed refusal surfaces. |
+| `adapters/ai_mesh.py` | AI Mesh provider discovery: id/state/free/cost_rank/capabilities from live mesh JSON. |
+| `adapters/autonomous_os.py` | AutonomousOS registration/heartbeat: mode, priority, worker caps; server integration. |
+| `tower.py` | Live curses TUI over the shared core: system/objectives/hive/providers/resources/verification/activity panes, detail views, confirmed cancel/retry controls (fail-closed). |
+| `autonomous_loop.py` | Bounded ten-stage autonomous progression with hard cycle/time/worker/cost limits, pause/resume/interrupt, crash-recovery detection, free-only routing. |
+| `hive_intelligence.py` | Pure assignment scoring (capability/success/latency/cost/usage/priority), free-first ties, throughput-gated parallelism, balanced chunking. |
+| `project_contract.py` | Fail-closed project contracts: scope, evidence rules, authorizations, cost ceiling, expiry; violations recorded. |
+| `measurements.py` | Real efficiency measurements: startup/import/run seconds, DB/home bytes, row counts. |
 | `verify.py` | Method dispatch, real checks, `classify_failure`, `retryable`, `evaluate_quality`, `suggest_next_action`. Part A: 8-stage `run_verify_pipeline` (STATIC/TEST/TYPECHECK/LINT/BUILD/RUNTIME/DIFF_REVIEW/CUSTOM), `DISALLOWED_VERIFY_COMMANDS` fail-closed list, extended failure taxonomy, `bounded_recover` (ABSOLUTE_CAP=5). |
 | `engine.py` | Plan-driven control loop (`run`, `recover`, `verify_latest`): sequential/parallel/iterative, independent verification, bounded recovery, pattern learning. Provider-neutral. Part A: mode/authorization enforcement at dispatch, BLOCKED gate for parents/dependencies, execution-record population (mode/auth/summary/normalize pair/change keys), `bounded_recover` wrapper. |
 | `safety.py` | Part A: `gate_allows(mode, auth)` + `require_execution_authority` — non-LIVE passes, LIVE needs explicit authorization (fail-closed). |

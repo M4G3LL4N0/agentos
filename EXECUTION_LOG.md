@@ -407,3 +407,33 @@ and repaired cli.py (recorded verbatim — see CURRENT_STATE.md):
 - Local release gate: **PASS**. Paid provider calls, GrokBot tasks, deployment,
   publication, and push: 0. Publication preparation remains separate from
   local verification.
+
+## 2026-10-19 — Phase 2: live tower + autonomous operations (830 tests OK)
+
+- Live tower (`tower.py`, curses): 7 sections + detail views; interactive
+  cancel/retry with explicit `y` confirmation, fail-closed without UI; no
+  `shell=True` in tower source. CLI surfaces: `tower`, `workers`, `providers`,
+  `logs`.
+- Bounded autonomous loop (`autonomous_loop.py`): 10 explicit stages; hard
+  cycle/time/worker/cost limits; pause/resume/interrupt; a RUNNING state
+  left by a crash is reloaded as INTERRUPTED (never assumed to have
+  survived); free-only routing unless paid authorization is recorded; state
+  in `loop_state.json` / `loop_limits.json`.
+- Hive intelligence (`hive_intelligence.py`): capability/success/latency/
+  cost/usage/priority scoring, free-first tie-breaks, 20%-improvement
+  threshold for parallel workers, balanced chunks (no prompt splitting).
+- Project contracts (`project_contract.py`): fail-closed — missing/expired
+  contract, out-of-scope, paid-under-free_only, cost-ceiling breach, missing
+  evidence all block; violations recorded, contract flips to VIOLATED.
+- Efficiency measurements (`measurements.py`): real startup/import/run
+  timings, DB/home byte counts, row counts. Store gained `count_objectives` /
+  `count_events`.
+- Security review of Phase 2: no shell=True in new modules; tower subprocess
+  uses fixed argv lists; confirm prompt accepts only `y`; state/contract
+  files contain no secret keys; loop history bounded at 200 entries; paid
+  execution default-blocked. Locked in by `test_phase2_security.py` (14 tests).
+- Full suite in one pass: **830 tests, 830 passed, 0 failures, 0 errors**.
+- Server live demo: BLOCKED this session — `100.127.182.126` unreachable
+  (100% ICMP loss, SSH timeouts ×5). Phase 1 deployment state is unchanged
+  and remains the demo target once the host is reachable. No deploy attempted.
+- Paid provider calls: 0. GrokBot tasks: 0. Pushes: 0. Destructive cleanup: 0.

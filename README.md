@@ -79,6 +79,10 @@ The `delegate` command returns the objective identifier used by the next command
 .venv/bin/agentos backup restore ./backups/<archive>.tar.gz --dry-run
 .venv/bin/agentos serve --host 127.0.0.1 --port 8765
 .venv/bin/agentos mcp
+.venv/bin/agentos workers
+.venv/bin/agentos providers
+.venv/bin/agentos logs --limit 50
+.venv/bin/agentos tower
 ```
 
 Every command supports the global `--json` option where structured output is useful. Use `--home DIR` or `AGENTOS_HOME` to keep experiments isolated. The local API is loopback-oriented and has no production authentication layer.
@@ -87,7 +91,7 @@ Every command supports the global `--json` option where structured output is use
 
 | Category | Boundary |
 | --- | --- |
-| **VERIFIED** | CLI, HTTP, and MCP stdio surfaces share one core; SQLite persistence; provider-neutral adapters; policy gates; bounded execution; verification; recovery; learning; backup inspection and restore dry-run; local benchmark. The 710-test release suite is green. |
+| **VERIFIED** | CLI, HTTP, and MCP stdio surfaces share one core; SQLite persistence; provider-neutral adapters; policy gates; bounded execution; verification; recovery; learning; backup inspection and restore dry-run; local benchmark. The 830-test suite (Phase 2: live tower, bounded autonomous loop, hive intelligence, project contracts) is green. |
 | **OPTIONAL** | Configured local CLIs, filesystem and shell adapters, OpenCode/GitHub/xAI/Grok/OpenClaw adapter code paths, federation metadata, A2A and MCP discovery surfaces, and read-only GrokBot Office bridging when their external prerequisites exist. |
 | **UNCONFIGURED** | Live provider credentials, production API authentication, remote peer credentials, external account state, and any claim that a worker is currently live. |
 | **EXPERIMENTAL** | Ecosystem discovery/certification, autonomy records, resource-governor policy extensions, and learned routing that still require measured operator evidence before being used for consequential work. |

@@ -194,3 +194,45 @@ Decision: bare `unauthorized/401/403` still classify as `auth` (no caller
 breaks); credential-shaped text classifies AUTH_REQUIRED; `retryable` and
 `bounded_recover` handle both; neither is retryable, both BLOCK.
 Consequence: backward compatible today, canonical name going forward.
+
+## D-Phase2-1 — curses TUI from the standard library
+Context: need a live operations tower with zero runtime dependencies.
+Decision: `tower.py` renders with stdlib `curses` over the shared core;
+controls read state through services only, never bypassing policy gates.
+Consequence: works over SSH with a TTY; headless environments use
+`workers`/`providers`/`logs`/`--json` instead; no terminal-UI dependency.
+
+## D-Phase2-2 — fail-closed confirmation on consequential tower actions
+Context: a live tower must not become a policy bypass.
+Decision: cancel requires an explicit `y` in the same terminal session; no
+UI or any other key aborts. Retry only from FAILED/BLOCKED through the same
+engine path as the CLI.
+Consequence: accidental keystrokes cannot cancel work; scripted/no-TTY
+environments cannot cancel at all.
+
+## D-Phase2-3 — bounded ten-stage loop with persisted limits
+Context: autonomous operation must terminate and survive crashes.
+Decision: INSPECT→PLAN→DECOMPOSE→ROUTE→DELEGATE→EXECUTE→VERIFY→REVIEW→
+REPAIR→COMPLETE with hard cycle/time/worker/cost limits checked between
+stages; state persisted atomically; a RUNNING state at load time becomes
+INTERRUPTED (a crash is never assumed to have succeeded).
+Consequence: every run ends in STOPPED/LIMIT_REACHED/failed state; paid
+execution requires `free_only=false` plus an explicit paid authorization
+entry; recovery is a resume, not a re-run.
+
+## D-Phase2-4 — contracts gate, they do not advise
+Context: autonomous agents need project boundaries with teeth.
+Decision: `ContractEnforcer.check_action` returns (allowed, reason) and
+every refusal path fails closed: no active contract, expired, out-of-scope,
+paid under free_only, cost-ceiling breach, missing required evidence.
+Violations append to the contract and flip status to VIOLATED.
+Consequence: a project without an active contract gets no consequential
+actions; breach evidence is durable for review.
+
+## D-Phase2-5 — parallelism only on measured throughput gain
+Context: idle agents and prompt splitting waste resources.
+Decision: `should_parallelize` requires a strict 20% wall-clock improvement
+over serial after per-worker overhead; `coalesce_tasks` balances groups to
+sizes differing by at most 1.
+Consequence: small/fast task sets stay serial; no worker is spawned for
+appearance.

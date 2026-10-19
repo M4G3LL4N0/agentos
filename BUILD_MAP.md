@@ -208,6 +208,41 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
       assert-narrowing; over-broad taxonomy substrings; `bounded_recover`
       name shadowing; verify stdout unredacted; `_has_tests` walk uncapped.
 
+## Server migration (Phase 1, 2026-10-18, 757 tests at merge)
+
+- [x] Linux path coverage (`test_linux_paths.py`), SQLite WAL +
+      `PRAGMA synchronous=NORMAL`
+- [x] Hive / JanitorOS / AI Mesh / AutonomousOS integration adapters
+- [x] CLI server commands (`workers`, `providers`, `logs`, `tower` dispatch)
+- [x] Deploy set: `deploy/agentos.service`, `agentos.env`, `install.sh`,
+      `noaerth-agentos` wrapper; systemd unit active on target host;
+      AutonomousOS registration ACTIVE (priority 60, max 4 workers);
+      objective `obj_91c25855be10` COMPLETED+VERIFIED with restart persistence
+
+## Live tower + autonomous operations (Phase 2, 2026-10-19, 830 tests)
+
+- [x] Live tower (`tower.py`, curses): 7 panes + detail views, confirmed
+      cancel, bounded retry, `test_tower.py`
+- [x] Autonomous loop (`autonomous_loop.py`): 10 stages, hard
+      cycle/time/worker/cost limits, pause/resume/interrupt, crash →
+      INTERRUPTED recovery, free-only default; `test_autonomous_loop.py`
+- [x] Hive intelligence (`hive_intelligence.py`): assignment scoring,
+      free-first ties, throughput-gated parallelism, balanced chunking;
+      `test_hive_intelligence.py`
+- [x] Project contracts (`project_contract.py`): fail-closed enforcement +
+      violations; `test_project_contract.py`
+- [x] Failure recovery tests: recover paths, bounded_recover caps,
+      interrupt/resume; `test_failure_recovery.py`
+- [x] Efficiency measurements (`measurements.py`): real timings/bytes;
+      store `count_objectives`/`count_events`; `test_measurements.py`
+- [x] Security review + `test_phase2_security.py` (fail-closed cancel,
+      free-only defaults, no secret keys, bounded state, no shell=True)
+- [x] Docs: CURRENT_STATE, EXECUTION_LOG, DECISIONS (D-Phase2-*),
+      ARCHITECTURE module map, README commands, this map
+- [ ] Live demo on server (`agentos tower`, loop demo objective, restart
+      persistence) — BLOCKED: host `100.127.182.126` unreachable (SSH
+      timeouts); Phase 1 deployment state unchanged
+
 ## NEXT (highest leverage first)
 
 1. **Part 2 planning** — federation economics/negotiation across remote

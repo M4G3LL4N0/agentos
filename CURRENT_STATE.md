@@ -1,14 +1,46 @@
 # AgentOS Current State
 
-Living document — reflects reality as of 2026-09-25 (v0.5.0 release gate PASS; 710 tests green; public remote and CI verified).
+Living document — reflects reality as of 2026-10-19 (Phase 2 live tower +
+autonomous operations; 830 tests green).
 If this file and behaviour disagree, behaviour wins; fix this file.
 
 ## Status: genuinely useful universal Agent Engine (local)
 
 `agentos` installs (`pip install -e .`) and works through **CLI, HTTP API
-and MCP stdio** against one shared core. 710 automated tests pass. Runtime
+and MCP stdio** against one shared core. 830 automated tests pass. Runtime
 verified end-to-end with real detections, real executions, a deliberate
 failure with recovery, a policy refusal, and restart persistence.
+
+## Phase 2: live tower + autonomous operations (2026-10-19, 830 tests)
+
+- **Live tower** (`tower.py`): curses TUI with SYSTEM / OBJECTIVES / HIVE /
+  PROVIDERS / RESOURCES / VERIFICATION / ACTIVITY sections, detail views, and
+  interactive controls. Cancel requires explicit `y` confirmation and fails
+  closed without UI; no `shell=True` in tower source. CLI: `agentos tower`.
+- **New CLI surfaces**: `agentos workers`, `agentos providers`, `agentos logs`.
+- **Bounded autonomous loop** (`autonomous_loop.py`): ten explicit stages
+  (INSPECT → PLAN → DECOMPOSE → ROUTE → DELEGATE → EXECUTE → VERIFY → REVIEW →
+  REPAIR → COMPLETE) with hard cycle/time/worker/cost limits, pause/resume/
+  interrupt, crash recovery that marks a RUNNING state INTERRUPTED on restart,
+  and free-only provider routing unless paid authorization is explicitly
+  recorded. State persists in `loop_state.json` / `loop_limits.json`.
+- **Hive intelligence** (`hive_intelligence.py`): evidence-based assignment
+  scoring (capability fit, historical success, latency, cost rank, usage
+  limits, verification burden, project priority) with free-first tie-breaking,
+  measurable-throughput-only parallelism, and balanced chunking that avoids
+  excessive prompt splitting.
+- **Project contracts** (`project_contract.py`): fail-closed enforcement —
+  no active contract, expired contract, out-of-scope operation, paid operation
+  under `free_only`, cost-ceiling breach, or missing required evidence all
+  block; violations are recorded and flip the contract to VIOLATED.
+- **Efficiency measurements** (`measurements.py`): real measured startup,
+  import, per-run seconds, DB/home bytes, objective/event counts.
+- **Full suite: 830 tests, 0 failures, 0 errors.** Phase 2 security suite
+  (`test_phase2_security.py`) locks in fail-closed cancel, free-only defaults,
+  bounded state, and no-secret key files.
+- Server: Phase 1 deployment (`agentos.service`, `noaerth agentos` wrapper,
+  `http://127.0.0.1:8765/health`) remains the deployment target; Phase 2 live
+  demo pending server reachability (see EXECUTION_LOG).
 
 ## Learning execution release (LOCAL GATE PASS, v0.5.0, 710 tests)
 
