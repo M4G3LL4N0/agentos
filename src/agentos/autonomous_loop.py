@@ -115,6 +115,7 @@ class AutonomousLoop:
         self.limits = limits or LoopLimits()
         self.state_path = self.home / "loop_state.json"
         self.limits_path = self.home / "loop_limits.json"
+        self._executing = False
         self._load()
 
     # -- persistence ----------------------------------------------------
@@ -234,12 +235,13 @@ class AutonomousLoop:
 
         Returns a report with final status, stages completed and evidence.
         """
-        if self.state.status == LoopStatus.RUNNING:
+        if self._executing:
             raise AgentOSError("loop already running")
         objective = self.app.store.get_objective(objective_id)
         if objective is None:
             raise AgentOSError(f"unknown objective: {objective_id}")
 
+        self._executing = True
         self.state.status = LoopStatus.RUNNING
         self.state.objective_id = objective_id
         if not self.state.started_at:
@@ -307,6 +309,7 @@ class AutonomousLoop:
                 if not final_ok:
                     report["termination"] = final_detail
         finally:
+            self._executing = False
             self.state.spent_seconds += time.monotonic() - started
             if self.state.status == LoopStatus.RUNNING:
                 self.state.status = LoopStatus.STOPPED

@@ -94,7 +94,7 @@ class TestAutonomousLoop(unittest.TestCase):
 
     def test_full_run_safe_echo_objective(self) -> None:
         objective = self.app.create_objective(
-            "loop echo test", operation="echo.run", params={"message": "hi"}
+            "loop echo test", operation="echo", params={"message": "hi"}
         )
         report = self.loop.run(objective.id)
         self.assertIn("stages", report)
