@@ -74,17 +74,35 @@ class JanitorOSAdapter:
         result = self._run_janitor(
             ["space", "admit", "--bytes", str(bytes_needed), "--json"]
         )
-        if not result.get("ok"):
+        # call-level failure (wrapper emitted by _run_janitor)
+        if result.get("ok") is False:
             return {
                 "ok": False,
                 "error": result.get("error", "janitor call failed"),
             }
-        if result.get("admitted", False):
-            return {"ok": True, "admitted": True}
-        return {
-            "ok": False,
-            "error": result.get("reason", "admission denied"),
-        }
+        # real JanitorOS payload: {"admit": bool, "reason": ..., "avail_bytes": ...}
+        if "admit" in result:
+            if result.get("admit"):
+                return {
+                    "ok": True,
+                    "admitted": True,
+                    "avail_bytes": result.get("avail_bytes", 0),
+                    "reason": result.get("reason", ""),
+                }
+            return {
+                "ok": False,
+                "error": result.get("reason", "admission denied"),
+            }
+        # legacy wrapper shapes: {"ok": true, "admitted": bool}
+        if result.get("ok"):
+            if result.get("admitted"):
+                return {"ok": True, "admitted": True}
+            return {
+                "ok": False,
+                "error": result.get("reason", "admission denied"),
+            }
+        # unrecognised payload: fail closed
+        return {"ok": False, "error": result.get("reason", "janitor call failed")}
 
     def check_protected_path(self, path: str) -> bool:
         path_obj = Path(path)

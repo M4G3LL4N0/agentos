@@ -20,6 +20,46 @@ class TestJanitorOSAdapter(unittest.TestCase):
             result = adapter.request_admission(1024 * 1024 * 100)
             self.assertTrue(result["ok"])
 
+    def test_request_admission_real_janitor_payload(self) -> None:
+        # payload shape emitted by the real janitor binary (space admit --json)
+        from agentos.adapters.janitor import JanitorOSAdapter
+
+        adapter = JanitorOSAdapter()
+        with patch.object(adapter, "_run_janitor") as mock_run:
+            mock_run.return_value = {
+                "admit": True,
+                "band": "WARN",
+                "avail_bytes": 13868806144,
+                "requested_bytes": 1048576,
+                "floor_bytes": 8589934592,
+                "reason": "12.9 GiB free after reservation",
+            }
+            result = adapter.request_admission(1024 * 1024)
+            self.assertTrue(result["ok"])
+            self.assertTrue(result["admitted"])
+
+    def test_request_admission_real_janitor_denied(self) -> None:
+        from agentos.adapters.janitor import JanitorOSAdapter
+
+        adapter = JanitorOSAdapter()
+        with patch.object(adapter, "_run_janitor") as mock_run:
+            mock_run.return_value = {
+                "admit": False,
+                "reason": "below storage floor",
+            }
+            result = adapter.request_admission(1024 * 1024 * 1024)
+            self.assertFalse(result["ok"])
+            self.assertIn("below storage floor", result["error"])
+
+    def test_request_admission_unrecognised_payload_fails_closed(self) -> None:
+        from agentos.adapters.janitor import JanitorOSAdapter
+
+        adapter = JanitorOSAdapter()
+        with patch.object(adapter, "_run_janitor") as mock_run:
+            mock_run.return_value = {"ok": True, "raw": "not json"}
+            result = adapter.request_admission(1024)
+            self.assertFalse(result["ok"])
+
     def test_request_admission_denied(self) -> None:
         from agentos.adapters.janitor import JanitorOSAdapter
 
