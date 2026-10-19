@@ -149,3 +149,95 @@ class TestTower(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeScr:
+    """Faithful-enough curses fake: raises on out-of-bounds writes."""
+
+    def __init__(self, rows: int = 24, cols: int = 80) -> None:
+        self.rows = rows
+        self.cols = cols
+        self.writes: list[tuple[int, int, str]] = []
+        self._y = 0
+        self._x = 0
+
+    def getmaxyx(self) -> tuple[int, int]:
+        return (self.rows, self.cols)
+
+    def addstr(self, *args, **kw) -> None:
+        import curses as _curses
+
+        if len(args) >= 2 and isinstance(args[0], int):
+            y, x = args[0], args[1]
+            text = str(args[2]) if len(args) > 2 else ""
+        else:
+            y, x = self._y, self._x
+            text = str(args[0]) if args else ""
+        if y < 0 or x < 0 or y >= self.rows or x >= self.cols:
+            raise _curses.error("addwstr() returned ERR")
+        if y == self.rows - 1 and x + max(len(text), 1) >= self.cols:
+            raise _curses.error("addwstr() returned ERR")
+        self.writes.append((y, x, text))
+        self._y, self._x = y, x + len(text)
+
+    def erase(self) -> None:
+        self.writes.clear()
+
+    def refresh(self) -> None:
+        pass
+
+
+class TestTowerBounds(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.mkdtemp()
+        os.environ["AGENTOS_HOME"] = self.temp_dir
+        from agentos.services import AgentOS
+        from agentos.tower import Tower, _SafeScr
+
+        self.app = AgentOS(home=self.temp_dir)
+        self.tower = Tower(self.app)
+        self._SafeScr = _SafeScr
+        # populate enough content to overflow a 24-row terminal
+        for i in range(8):
+            self.app.create_objective(f"bulk objective {i}", operation="echo")
+
+    def test_draw_main_survives_overflow_on_24_rows(self) -> None:
+        import curses
+
+        data = self.tower._collect_data()
+        scr = FakeScr(24, 80)
+        with patch.object(curses, "color_pair", return_value=0):
+            self.tower._draw_main(self._SafeScr(scr), data)
+        # footer must still be written on the last row
+        self.assertTrue(any(y == 23 for y, x, t in scr.writes))
+
+    def test_raw_screen_raises_without_proxy(self) -> None:
+        # documents the vulnerability the proxy fixes: raw addstr on an
+        # overflowing 24-row screen must raise curses.error
+        import curses
+
+        data = self.tower._collect_data()
+        scr = FakeScr(24, 80)
+        with patch.object(curses, "color_pair", return_value=0):
+            with self.assertRaises(curses.error):
+                self.tower._draw_main(scr, data)
+
+    def test_swallow_write_errors_only(self) -> None:
+        import curses
+
+        inner = FakeScr(10, 20)
+        safe = self._SafeScr(inner)
+        safe.addstr(50, 0, "way off screen")  # swallowed
+        self.assertEqual(inner.writes, [])
+        # non-write attributes still pass through
+        self.assertEqual(safe.getmaxyx(), (10, 20))
+
+    def test_small_terminal_shows_message_not_crash(self) -> None:
+        import curses
+
+        scr = FakeScr(10, 40)
+        with patch.object(curses, "color_pair", return_value=0):
+            self.tower._draw(self._SafeScr(scr))
+        self.assertTrue(
+            any("Terminal too small" in t for y, x, t in scr.writes)
+        )

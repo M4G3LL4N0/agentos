@@ -23,6 +23,28 @@ from agentos.models import ObjectiveState
 from agentos.services import AgentOS
 
 
+class _SafeScr:
+    """Bounds-safe curses proxy: out-of-bounds writes never crash the tower.
+
+    Small terminals (or long activity lists) can push a section past the
+    last row; real ``addstr`` then raises ``curses.error`` and kills the
+    whole UI. This proxy swallows only write errors; all other screen
+    operations pass through untouched.
+    """
+
+    def __init__(self, scr: Any) -> None:
+        self._scr = scr
+
+    def addstr(self, *args: Any, **kwargs: Any) -> None:
+        try:
+            self._scr.addstr(*args, **kwargs)
+        except curses.error:
+            pass
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._scr, name)
+
+
 class Tower:
     """Live AgentOS tower — monitor and control the execution plane."""
 
@@ -39,6 +61,7 @@ class Tower:
         self.messages: list[str] = []
 
     def run(self, stdscr: Any) -> None:
+        stdscr = _SafeScr(stdscr)
         curses.curs_set(0)
         stdscr.timeout(int(self.refresh_interval * 1000))
         self._init_colors()
@@ -252,13 +275,21 @@ class Tower:
         self._draw_header(stdscr, data, max_x)
         row = 2
 
+        # sections are dropped cleanly once the footer row is reached
+        # instead of drawing over it (or off-screen on small terminals)
         row = self._draw_system(stdscr, data, row, max_x)
-        row = self._draw_objectives(stdscr, data, row, max_x)
-        row = self._draw_hive(stdscr, data, row, max_x)
-        row = self._draw_providers(stdscr, data, row, max_x)
-        row = self._draw_resources(stdscr, data, row, max_x)
-        row = self._draw_verification(stdscr, data, row, max_x)
-        self._draw_activity(stdscr, data, row, max_x)
+        if row < max_y - 1:
+            row = self._draw_objectives(stdscr, data, row, max_x)
+        if row < max_y - 1:
+            row = self._draw_hive(stdscr, data, row, max_x)
+        if row < max_y - 1:
+            row = self._draw_providers(stdscr, data, row, max_x)
+        if row < max_y - 1:
+            row = self._draw_resources(stdscr, data, row, max_x)
+        if row < max_y - 1:
+            row = self._draw_verification(stdscr, data, row, max_x)
+        if row < max_y - 1:
+            self._draw_activity(stdscr, data, row, max_x)
         self._draw_footer(stdscr, max_y, max_x)
 
     def _draw_header(self, stdscr: Any, data: dict[str, Any], max_x: int) -> None:
