@@ -116,7 +116,7 @@ class TestTower(unittest.TestCase):
         color = tower._state_color("COMPLETED")
         self.assertIsNotNone(color)
 
-    def test_cancel_objective(self) -> None:
+    def test_cancel_objective_requires_confirmation(self) -> None:
         from agentos.services import AgentOS
         from agentos.tower import Tower
 
@@ -125,7 +125,26 @@ class TestTower(unittest.TestCase):
         app.create_objective("test objective")
         tower.selected = 0
         tower._cancel_objective()
+        self.assertIn("Cancel aborted", tower.messages[0])
+        self.assertEqual(
+            app.list_objectives()[0].status.value, "READY"
+        )
+
+    def test_cancel_objective_confirmed(self) -> None:
+        from agentos.services import AgentOS
+        from agentos.tower import Tower
+
+        app = AgentOS(home=self.temp_dir)
+        tower = Tower(app)
+        app.create_objective("test objective")
+        tower.selected = 0
+        tower._stdscr = MagicMock()
+        with patch.object(Tower, "_confirm", return_value=True):
+            tower._cancel_objective()
         self.assertIn("Cancelled", tower.messages[0])
+        self.assertEqual(
+            app.list_objectives()[0].status.value, "CANCELLED"
+        )
 
 
 if __name__ == "__main__":

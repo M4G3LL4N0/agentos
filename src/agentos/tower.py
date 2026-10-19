@@ -42,6 +42,7 @@ class Tower:
         curses.curs_set(0)
         stdscr.timeout(int(self.refresh_interval * 1000))
         self._init_colors()
+        self._stdscr = stdscr
 
         while True:
             self._refresh_data()
@@ -49,6 +50,9 @@ class Tower:
             key = stdscr.getch()
             if key == ord("q") or key == 27:
                 break
+            if self.detail_view is not None and key != curses.KEY_RESIZE:
+                self.detail_view = None
+                continue
             if key == curses.KEY_UP:
                 self.selected = max(0, self.selected - 1)
             elif key == curses.KEY_DOWN:
@@ -85,7 +89,7 @@ class Tower:
         curses.init_pair(5, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
-    def _refresh_data() -> None:
+    def _refresh_data(self) -> None:
         now = time.time()
         if now - self.last_refresh < self.refresh_interval:
             return
@@ -445,12 +449,26 @@ class Tower:
         elif obj.status == ObjectiveState.BLOCKED:
             self.messages.append(f"Resumed {obj.id}")
 
+    def _confirm(self, stdscr: Any, message: str) -> bool:
+        max_y, max_x = stdscr.getmaxyx()
+        prompt = f" {message} — press y to confirm, any key to abort "
+        stdscr.addstr(max_y - 1, 0, prompt[: max_x - 1], curses.A_REVERSE)
+        stdscr.refresh()
+        stdscr.timeout(-1)
+        key = stdscr.getch()
+        stdscr.timeout(int(self.refresh_interval * 1000))
+        return key == ord("y")
+
     def _cancel_objective(self) -> None:
         objectives = self.app.list_objectives()
         if not objectives:
             return
         idx = min(self.selected, len(objectives) - 1)
         obj = objectives[idx]
+        stdscr = getattr(self, "_stdscr", None)
+        if stdscr is None or not self._confirm(stdscr, f"Cancel {obj.id}?"):
+            self.messages.append(f"Cancel aborted for {obj.id}")
+            return
         self.app.cancel_objective(obj.id)
         self.messages.append(f"Cancelled {obj.id}")
 
