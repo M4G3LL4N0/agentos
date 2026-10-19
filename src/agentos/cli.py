@@ -228,6 +228,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("providers", help="list AI mesh providers")
     p_logs = sub.add_parser("logs", help="show recent events")
     p_logs.add_argument("--limit", type=int, default=50)
+    sub.add_parser("tower", help="launch live terminal tower")
 
     p_mcp = sub.add_parser("mcp", help="MCP candidate lifecycle (or serve stdio)")
     mcp_sub = p_mcp.add_subparsers(dest="mcp_command", required=False)
@@ -723,6 +724,8 @@ def dispatch(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
         return cmd_providers(app, args, as_json)
     if cmd == "logs":
         return cmd_logs(app, args, as_json)
+    if cmd == "tower":
+        return cmd_tower(app, args, as_json)
     if cmd == "mcp":
         return cmd_mcp(app, args, as_json)
     if cmd == "ecosystem":
@@ -1184,6 +1187,12 @@ def cmd_logs(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
     for event in events:
         scope = event.get("objective_id") or "-"
         print(f"{event['created_at']}  {event['event_type']:<24} {scope}")
+    return 0
+
+
+def cmd_tower(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
+    from agentos.tower import run_tower
+    run_tower(app)
     return 0
 
 
