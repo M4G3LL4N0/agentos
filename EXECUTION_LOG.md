@@ -561,3 +561,17 @@ COMPLETED+VERIFIED, loop_state in `/var/lib`, old rollback copy
 byte-identical); fresh backup + both restores round-tripped; pressure
 sim via injected thresholds. 872 tests OK local (199s) + server (135s).
 Paid calls: 0. Pushes: 0. Unverified deletions: 0.
+
+Phase 4B governor integration (2026-10-20): resource contract snapshot
+publisher + four-question worker admission + scratch leases + Hive/Control
+Tower/fleet-doctor hooks + GET /resource + every-2-min cron. 940 tests
+green local+server; integration proved accept/defer/refuse with registry
+digest unchanged and no subprocess side effects. Live first publish:
+14/15 fields (disk_growth honest UNKNOWN); live admission refuses under
+the AOS SEVERE hold as designed. Before/after: load 3.01→2.45, no
+zombies/finds/leases, band PRESSED held (no oscillation), studio RUNNING
+0→0, NRestarts 0. Server releases: 20261020T210429Z/210909Z/214518Z/
+215130Z. Bugs found+fixed in-phase: gate int-clock truncation; snapshot
+mode 664→0644 for cross-user readers. Incidents handled: stray collector
+import (duplicate live.json writer) killed <3min, atomic writes absorbed
+it. Pushes: 0. Paid calls: 0. Deletions: 0.

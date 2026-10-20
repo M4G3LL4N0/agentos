@@ -452,3 +452,21 @@ Full detail in `EFFICIENCY_KERNEL.md`, `INTELLIGENCE_CACHE.md`, `TRIAGE.md`,
 - Suite: `.venv/bin/python -m unittest discover -s tests` → **456 OK**
   (433 baseline + 23 kernel). No paid usage, no Grok task execution, no
   network side effects.
+
+## Phase 4B — NOAERTH governor integration (2026-10-20, PASS)
+
+ServerOS now publishes a bounded resource contract snapshot
+(`/var/lib/agentos/resource-snapshot.json`, 0644, every 2 min via cron)
+from existing authorities only (AOS governor + scheduler demands,
+JanitorOS, REALM Studio, host governor, kernel). New modules
+`resource_contract.py` + `worker_admission.py`: four-question admission
+(can_start/budget/constraining_resource/retry_after_s) with provider
+cooldowns independent of CPU, fail-closed on stale/UNKNOWN, capacity
+ceiling of 2 additional heavyweight coding workers, and scratch leases
+over the existing JanitorOS scratch registry. Server-side hooks (backed
+up `.bak-4b-20261020`): Hive `submit_manifest` snapshot gate (CRITICAL
+refuses, PRESSED defers LOW only), Control Tower `serveros` panel,
+fleet-doctor `resource_health` key, `GET /resource`. 940/940 tests green
+local + server; live admission correctly defers to the AOS
+allow_new_work=false hold. Details: `PHASE4B_GOVERNOR_INTEGRATION.md`,
+`PHASE4B_ACCEPTANCE.json`, `NOAERTH_RESOURCE_CONTRACT.json`.

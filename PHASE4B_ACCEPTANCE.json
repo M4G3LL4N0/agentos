@@ -1,0 +1,77 @@
+{
+  "phase": "4B",
+  "name": "governor-integration",
+  "status": "PASS",
+  "completed_utc": "2026-10-20T22:00:00Z",
+  "owner": "ServerOS",
+  "branch": "main",
+  "pushed": false,
+  "commits": [
+    {"sha": "99f682b", "subject": "feat(phase4b): resource contract snapshot + four-question worker admission"},
+    {"sha": "d241cb8", "subject": "test(phase4b): kernel-fallback fields environment-dependent, provenance asserted"},
+    {"sha": "8de78a2", "subject": "fix(phase4b): publish resource snapshot world-readable (0644)"},
+    {"sha": "a0ef456", "subject": "test(phase4b): server-only Hive gate integration"}
+  ],
+  "tests": {
+    "repo_total_server": 940,
+    "repo_total_local": 940,
+    "result": "OK",
+    "new_suites": {
+      "tests/test_resource_contract.py": 20,
+      "tests/test_worker_admission.py": 20,
+      "tests/test_pressure_response.py": 10,
+      "tests/test_phase4b_hive_gate.py": "8 (server-only; skip locally by design)"
+    },
+    "pressure_scenarios": [
+      "cpu_saturation", "memory_critical", "disk_denied", "worker_stacking",
+      "failed_cron_environment", "stuck_filesystem_scans",
+      "provider_rate_limit_independence", "verification_overload"
+    ]
+  },
+  "surfaces": {
+    "snapshot": {"path": "/var/lib/agentos/resource-snapshot.json", "mode": "0644", "cadence_s": 120, "cron": "root crontab */2 * * * * via noaerth agentos governor snapshot --publish"},
+    "hive_gate": {"file": "/srv/noaerth/autonomousos/mesh/hive/execution.py", "fn": "serveros_snapshot_gate", "backup": "execution.py.bak-4b-20261020"},
+    "collector_panel": {"key": "serveros", "file": "/srv/noaerth/control/collector.py", "backup": "collector.py.bak-4b-20261020", "unit": "noaerth-ui-collector.service (portfolio user)"},
+    "doctor_key": {"key": "resource_health", "file": "/srv/noaerth/autonomousos/mesh/health.py", "backup": "health.py.bak-4b-20261020"},
+    "api": {"route": "GET /resource", "service": "agentos (127.0.0.1:8765)"},
+    "cli": ["governor snapshot [--publish|--read]", "governor admit-worker", "governor lease register|complete|list"],
+    "audit_event": "resource.admission_decided"
+  },
+  "live_verification": {
+    "first_publish": {"fields_populated": "14/15", "unknown": ["disk_growth"], "band": "PRESSED", "storage": "ALLOW", "workers": 4, "queued": 5},
+    "admission_under_live_state": {"can_start": false, "constraining": "autonomousos_hold", "retry_after_s": 60, "capacity_additional_heavy_coding": 0},
+    "integration": {"low_deferred": true, "medium_submitted_once": true, "critical_refused_registry_digest_unchanged": true, "duplicate_refusal_unchanged": true, "no_subprocess_side_effects": true},
+    "phase5_views": {"live_json_serveros_panel": true, "doctor_resource_health": true, "get_resource_route": true},
+    "cron_fire_verified": true
+  },
+  "before_after": {
+    "before_utc": "2026-10-20T20:40:45Z",
+    "after_utc": "2026-10-20T21:58:27Z",
+    "load1": [3.01, 2.45],
+    "processes": [201, 194],
+    "zombies": [0, 0],
+    "stuck_finds": [0, 0],
+    "active_leases": [0, 0],
+    "studio_running": [0, 0],
+    "governor_band": ["PRESSED", "PRESSED"],
+    "agentos_nrestarts": [0, 0],
+    "disk_free_gb": [16.0, 16.8]
+  },
+  "server_deploy_releases": ["20261020T210429Z", "20261020T210909Z", "20261020T214518Z", "20261020T215130Z"],
+  "findings": [
+    "AOS governor SEVERE/allow_new_work=false is the active primary brake; capacity 0 and refusals are that hold working as designed",
+    "disk_growth UNKNOWN until janitor forecast has more samples",
+    "verification test run wrote state/admission-backoff.json failures=1 (advisory, self-clearing)",
+    "collector.py runs its loop at import; a duplicate writer from an inline test was killed within ~3 min, no live.json damage (atomic writes)",
+    "gate int-clock truncation bug found by live integration test and fixed (float clock)",
+    "storage-janitor cron runs as portfolio user (pre-existing; outside this phase's scope)"
+  ],
+  "rollback": {
+    "hooks": "restore *.bak-4b-20261020; restart noaerth-ui-collector for collector (hive gate needs no restart)",
+    "code": "safe-deploy auto-rollback on failed health gate; manual via /var/backups/agentos/releases/",
+    "cron": "remove single crontab line; snapshot file is inert"
+  },
+  "constraints_honored": ["no new scheduler", "no new task db", "no paid inference", "no push", "no destructive cleanup", "no worker started/killed", "no other agent task/worktree touched", "bounded outputs", "explicit UNKNOWN"],
+  "record_commit": "pending-docs-commit",
+  "sign_off": "operator review of PHASE4B_GOVERNOR_INTEGRATION.md + this record"
+}

@@ -327,3 +327,21 @@ Evidence: `PHASE3_ACCEPTANCE.md`, `/root/phase3/*` on the server.
   (behind approvals + policy design first).
 - Model-based quality judge (evaluator slot exists).
 - OrgOS integration (separate project; consumes AgentOS via API/MCP/CLI).
+
+## Phase 4B additions (2026-10-20)
+
+- `src/agentos/resource_contract.py` — snapshot builder/publisher
+  (env-overridable paths `AGENTOS_RES_*`), UNKNOWN provenance, atomic
+  0644 publish, O(1) read with staleness.
+- `src/agentos/worker_admission.py` — pure `admit_worker` (four
+  questions), scratch-lease wrapper over `janitor space scratch`.
+- Services: `resource_snapshot`, `worker_admission`, `scratch_lease`;
+  CLI: `governor snapshot|admit-worker|lease`; API: `GET /resource`;
+  EventType: `RESOURCE_ADMISSION_DECIDED`.
+- Contract doc: `NOAERTH_RESOURCE_CONTRACT.json` (fields, source
+  precedence, capacity/admission policy, consumer rules, env overrides).
+- Tests: `test_resource_contract`, `test_worker_admission`,
+  `test_pressure_response`, `test_phase4b_hive_gate` (server-only).
+- Server tree hooks (not in this git): `mesh/hive/execution.py`
+  `serveros_snapshot_gate`, `control/collector.py` `serveros_panel`,
+  `mesh/health.py` `resource_contract_health` — backups `.bak-4b-*`.
