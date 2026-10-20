@@ -227,7 +227,7 @@
   "open_items": [
     "Operator sign-off for /tmp manifest execution (394 paths, 92 MiB)",
     "Observe reactor */15 cron vs disk-watch */5 interplay for 24h",
-    "Push only on explicit instruction (main is 25 commits ahead of origin)",
+    "Push only on explicit instruction (main is 27 commits ahead of origin as of this record)",
     "Deferred: syscall-filter/MDWE re-probe with worker model; dual janitor binary lockstep upgrades"
   ],
   "ready_for": "Phase 4B",

@@ -140,7 +140,7 @@ Other actor's processes killed **0** · Other actor's files modified **0**.
 
 1. Operator sign-off to execute the /tmp approval manifest (394 paths, 92 MiB).
 2. Watch the new reactor `*/15` cron interplay with disk-watch `*/5` (concurrent actor's Phase 7 work).
-3. Push `main` (25 commits ahead of `origin`) only when explicitly instructed.
+3. Push `main` (27 commits ahead of `origin` as of this record) only when explicitly instructed.
 4. Deferred from Phase 3: syscall-filter/MDWE re-probe when the worker model changes; JanitorOS binary upgrades must replace both copies in lockstep.
 
 **Phase 4B: ready to start when briefed.**
