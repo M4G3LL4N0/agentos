@@ -125,6 +125,9 @@ class AgentOSHandler(BaseHTTPRequestHandler):
             return {"patterns": self.app.patterns(limit=100)}
         if path == "/gaps":
             return {"gaps": self.app.gaps()}
+        if path == "/resource":
+            # NOAERTH resource contract: O(1) read of the published snapshot.
+            return self.app.resource_snapshot()
         match = re.fullmatch(r"/objectives/([^/]+)", path)
         if match:
             return self.app.inspect(match.group(1))

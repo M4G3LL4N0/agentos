@@ -1,0 +1,88 @@
+{
+  "schema": "noaerth.resource-contract/1",
+  "title": "NOAERTH resource contract (Phase 4B)",
+  "owner": "ServerOS (server resource governance)",
+  "publisher": {
+    "module": "agentos.resource_contract",
+    "artifact": "/var/lib/agentos/resource-snapshot.json",
+    "cadence": "every 2 minutes (root cron: noaerth agentos governor snapshot --publish)",
+    "write": "atomic tmp+rename, bounded <= 64KB (typical < 16KB)",
+    "log": "bounded summary lines only (no full JSON into syslog)"
+  },
+  "fields": {
+    "cpu_usage": {"unit": "percent", "type": "number|UNKNOWN", "sources": ["autonomousos.state/resource.json host.cpu.usage", "proc.stat two-sample delta"]},
+    "load_averages": {"unit": "1/5/15 load", "type": "array|UNKNOWN", "sources": ["autonomousos.state/resource.json host.load1/5/15", "os.getloadavg"]},
+    "available_memory": {"unit": "bytes", "type": "number|UNKNOWN", "sources": ["autonomousos.state/resource.json host.memory.available_gb", "proc.meminfo MemAvailable"]},
+    "memory_pressure": {"unit": "PSI some avg10 percent", "type": "number|UNKNOWN", "sources": ["autonomousos.state/resource.json pressure.memory.some_avg10", "proc.pressure.memory"]},
+    "swap_pressure": {"unit": "percent of SwapTotal used", "type": "number|UNKNOWN", "sources": ["proc.meminfo (SwapTotal=0 -> UNKNOWN)"]},
+    "disk_free": {"unit": "bytes", "type": "number|UNKNOWN", "sources": ["janitor space status --json disk.avail_bytes", "autonomousos.state/resource.json host.disk.free", "shutil.disk_usage /"]},
+    "disk_growth": {"unit": "bytes per day change in free space", "type": "number|UNKNOWN", "sources": ["janitor space status --json forecast (trend=insufficient data -> UNKNOWN)"]},
+    "disk_io_pressure": {"unit": "PSI some avg10 percent", "type": "number|UNKNOWN", "sources": ["autonomousos.state/resource.json pressure.io.some_avg10", "proc.pressure.io"]},
+    "active_processes": {"unit": "count", "type": "number|UNKNOWN", "sources": ["one bounded /proc scan"]},
+    "active_workers": {"unit": "count", "type": "number|UNKNOWN", "sources": ["autonomousos scheduler demands SUM(active_workers) - authoritative registry"]},
+    "queued_demand": {"unit": "count", "type": "number|UNKNOWN", "sources": ["autonomousos scheduler demands SUM(queue_depth)"]},
+    "storage_admission": {"unit": "ALLOW|DENY", "type": "string", "sources": ["janitor space status --json admission_default.admit (absent -> UNKNOWN)"]},
+    "resource_band": {"unit": "n/a", "type": "HEALTHY|PRESSED|RECOVERING|CRITICAL|UNKNOWN", "sources": ["agentos host_governor evaluate (hysteresis applied there, never here)"]},
+    "recommended_worker_capacity": {"unit": "n/a", "type": "object", "sources": ["derived (see policy.capacity)"]},
+    "updated_utc": {"unit": "ISO-8601 Z", "type": "string", "sources": ["publisher clock"]}
+  },
+  "unknown_semantics": {
+    "value": "UNKNOWN",
+    "list": "_meta.unknown_fields",
+    "per_field_source": "_meta.field_sources",
+    "rule": "A source that cannot be read yields UNKNOWN, never a fabricated sample. UNKNOWN is fail-closed for capacity and admission."
+  },
+  "policy": {
+    "capacity": {
+      "initial_concurrency": "at most 2 additional heavyweight coding workers (MAX_ADDITIONAL_HEAVY_CODING=2)",
+      "matrix": [
+        "HEALTHY + aos_allow!=false + storage=ALLOW -> additional_heavy_coding=2",
+        "PRESSED or RECOVERING + same -> 1 (slowed admissions; band is hysteresis-held)",
+        "CRITICAL or band=UNKNOWN or aos_allow=false or storage DENY/UNKNOWN or stacking/stuck scan -> 0"
+      ],
+      "never": "raise an existing cap (mesh DEFAULT_CAPS cpu_heavy=2 base stays authoritative); never start/stop/kill a worker; never modify another agent's task state"
+    },
+    "admission": {
+      "questions": ["can_start", "budget", "constraining_resource", "retry_after_s"],
+      "order": ["provider_cooldown (independent of CPU, evaluated first)", "resource_band", "autonomousos allow_new_work hold", "storage_admission", "infrastructure (stacking/stuck scans)", "verification overload (verification profile only)", "PRESSED/RECOVERING low-priority defer + heavy defer", "worker capacity"],
+      "fail_closed": "missing/stale (>180s)/UNKNOWN snapshot refuses with honest reason + bounded retry_after_s",
+      "fail_open_only_for": "Consumers that cannot read the snapshot file at all fall back to the pre-existing gates (Hive execution.py gate, host governor admission). The snapshot gate never replaces them.",
+      "hysteresis": "taken from the host governor band only; admission adds no second hysteresis loop",
+      "retry_hints_s": {"stale_snapshot": 15, "unknown_source": 15, "band_critical": 300, "band_pressed": 120, "band_recovering": 120, "heavy_under_pressure": 120, "low_priority_deferred": 60, "storage_denied": 60, "storage_unknown": 60, "process_stacking": 120, "stuck_filesystem_scan": 120, "verification_overload": 120, "autonomousos_hold": 60, "worker_capacity_exhausted": 60}
+    },
+    "pressure_response": {
+      "cpu_saturation": "band falls via governor -> capacity 1 then 0; heavy deferred",
+      "memory": "memory_pressure field reports PSI; CRITICAL band refuses",
+      "disk": "storage_admission DENY refuses; disk_free/disk_growth reported from JanitorOS",
+      "worker_stacking": "janitor_processes>2 or disk_watch_processes>1 -> stacking_detected, capacity 0, refuse",
+      "failed_cron_environment": "janitor unreadable -> storage_admission UNKNOWN -> refuse (fail closed)",
+      "stuck_filesystem_scans": "find processes older than 600s counted; >0 -> capacity 0, refuse",
+      "provider_rate_limit": "studio kv provider_wait:<epoch> active -> provider_cooldown refusal regardless of host health; healthy host does not override a cooling provider and vice versa",
+      "verification_overload": "active test leases >= test cap (3) -> verification profile refused; heavy/light unaffected (admission-only rule)"
+    },
+    "scratch_leases": {
+      "mechanism": "existing JanitorOS: janitor space scratch register|complete|reap",
+      "registry": "/var/lib/agentos/scratch-leases.json (bounded 500 records)",
+      "fields": ["task_id", "venture_id", "workspace", "scratch_root", "storage_budget", "creation_time", "owner", "lease_state", "retention_policy"],
+      "states": ["ACTIVE", "COMPLETED_PENDING_REAP", "RETIRED", "REFUSED"],
+      "retention": "disposable -> reap requested on completion; rollback_critical/evidence -> retained, never requested for reaping"
+    },
+    "audit": {"event": "resource.admission_decided", "emitted": "every admit_worker decision via services.worker_admission"}
+  },
+  "consumers": {
+    "mesh/hive/execution.py": "reads published snapshot; present+fresh and band CRITICAL -> refuse manifest (serveros_band_critical); PRESSED/RECOVERING -> defer LOW-level manifests only (HIGH/CRITICAL pass, default MEDIUM unaffected); absent/stale -> skip this gate (pre-existing gate still governs)",
+    "control/collector.py": "additive serveros panel (O(1) file read)",
+    "mesh/health.py doctor": "additive resource_health top-level key (O(1) file read)",
+    "api GET /resource": "read-only O(1) read of published file"
+  },
+  "freshness": {"consumer_max_age_s": 180, "stale_meaning": "UNKNOWN for admission; consumers fall back to their pre-existing gates"},
+  "env_overrides": {
+    "AGENTOS_HOME": "governor state dir (default ~/.agentos)",
+    "AGENTOS_RES_AOS_RESOURCE": "default /srv/noaerth/autonomousos/state/resource.json",
+    "AGENTOS_RES_AOS_DB": "default /srv/noaerth/autonomousos/data/autonomousos.sqlite3",
+    "AGENTOS_RES_STUDIO_DB": "default /srv/noaerth/realm-studio/state/studio.sqlite3",
+    "AGENTOS_RES_JANITOR": "default /usr/local/bin/janitor",
+    "AGENTOS_RES_SNAPSHOT": "default /var/lib/agentos/resource-snapshot.json"
+  },
+  "non_goals": ["competing scheduler", "new task database", "telemetry daemon", "starting/stopping workers", "modifying another agent's task or worktree", "paid inference calls"]
+}

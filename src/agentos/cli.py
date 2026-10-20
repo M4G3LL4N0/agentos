@@ -572,6 +572,51 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_ghost.add_argument("--bytes", type=int, default=0, dest="bytes_needed")
     p_ghost.add_argument("--heavy", action="store_true")
+    p_gsnap = gov_sub.add_parser(
+        "snapshot", help="NOAERTH resource contract snapshot (bounded output)"
+    )
+    g_snap_mode = p_gsnap.add_mutually_exclusive_group()
+    g_snap_mode.add_argument(
+        "--publish", action="store_true", help="build from sources and publish the file"
+    )
+    g_snap_mode.add_argument(
+        "--read", action="store_true", help="read the published file only (no sources)"
+    )
+    p_gadmit = gov_sub.add_parser(
+        "admit-worker",
+        help="four-question worker admission from the published snapshot (exit 1 if refused)",
+    )
+    p_gadmit.add_argument(
+        "--profile",
+        default="heavyweight_coding",
+        choices=["heavyweight_coding", "light", "verification"],
+    )
+    p_gadmit.add_argument("--bytes", type=int, default=0, dest="bytes_needed")
+    p_gadmit.add_argument("--level", default="MEDIUM", help="objective level (LOW defers under pressure)")
+    p_gadmit.add_argument(
+        "--cooldown-until",
+        type=float,
+        default=None,
+        dest="cooldown_until",
+        help="provider cooldown epoch (evaluated independently of CPU)",
+    )
+    p_glease = gov_sub.add_parser("lease", help="scratch leases over JanitorOS policy")
+    lease_sub = p_glease.add_subparsers(dest="lease_command", required=True)
+    p_lreg = lease_sub.add_parser("register", help="declare task scratch at task start")
+    p_lreg.add_argument("--task", required=True)
+    p_lreg.add_argument("--venture", default="")
+    p_lreg.add_argument("--workspace", default="")
+    p_lreg.add_argument("--scratch", required=True, dest="scratch_root")
+    p_lreg.add_argument("--bytes", type=int, default=0, dest="storage_budget")
+    p_lreg.add_argument("--owner", default="")
+    p_lreg.add_argument(
+        "--retention",
+        default="disposable",
+        choices=["rollback_critical", "evidence", "disposable"],
+    )
+    p_lcomp = lease_sub.add_parser("complete", help="mark scratch finished; request reap")
+    p_lcomp.add_argument("--task", required=True)
+    lease_sub.add_parser("list", help="list recorded scratch leases")
 
     p_sup = sub.add_parser(
         "supervisor", help="supervisor operating model: honest chain status"
@@ -1953,6 +1998,94 @@ def cmd_governor(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
         print(_paint("host admission", BOLD))
         print(f"  band={result['band']} admit={result['admit']} — {result['reason']}")
         return 0 if result["admit"] else 1
+    if sub == "snapshot":
+        publish = bool(getattr(args, "publish", False))
+        read_only = bool(getattr(args, "read", False))
+        if publish:
+            result = app.resource_snapshot(publish=True)
+        elif read_only:
+            result = app.resource_snapshot()
+        else:
+            result = app.resource_snapshot(live=True)
+        if as_json:
+            return emit_json(result)
+        snap = result.get("snapshot") or {}
+        if not result["ok"]:
+            print(_paint(f"resource snapshot: {result['error']}", BOLD))
+            return 1
+        meta = snap.get("_meta") or {}
+        capacity = snap.get("recommended_worker_capacity") or {}
+        print(_paint(f"resource snapshot ({result['mode']}: {result['path']})", BOLD))
+        print(f"  band={snap.get('resource_band')} storage={snap.get('storage_admission')} "
+              f"workers={snap.get('active_workers')} queued={snap.get('queued_demand')}")
+        print(f"  cpu={snap.get('cpu_usage')}% load={snap.get('load_averages')} "
+              f"disk_free={snap.get('disk_free')} growth={snap.get('disk_growth')}")
+        print(f"  additional_heavy_coding={capacity.get('additional_heavy_coding')} "
+              f"— {capacity.get('basis')}")
+        unknowns = meta.get("unknown_fields") or []
+        if unknowns:
+            print(f"  UNKNOWN fields: {', '.join(unknowns)}")
+        print(f"  updated={snap.get('updated_utc')}")
+        return 0
+    if sub == "admit-worker":
+        result = app.worker_admission(
+            profile=args.profile,
+            bytes_needed=args.bytes_needed,
+            level=args.level,
+            provider_cooldown_until=args.cooldown_until,
+        )
+        if as_json:
+            return emit_json(result)
+        print(_paint("worker admission", BOLD))
+        print(f"  can_start={result['can_start']} "
+              f"constraining={result['constraining_resource']} "
+              f"retry_after_s={result['retry_after_s']}")
+        print(f"  {result['reason']}")
+        if result["can_start"]:
+            budget = result.get("budget") or {}
+            print(f"  budget: additional_heavy_coding={budget.get('additional_heavy_coding')} "
+                  f"band={budget.get('band')} bytes_cap={budget.get('bytes_cap')}")
+        return 0 if result["can_start"] else 1
+    if sub == "lease":
+        lease_sub_cmd = getattr(args, "lease_command", None)
+        if lease_sub_cmd == "register":
+            result = app.scratch_lease(
+                "register",
+                task_id=args.task,
+                venture_id=args.venture,
+                workspace=args.workspace,
+                scratch_root=args.scratch_root,
+                storage_budget=args.storage_budget,
+                owner=args.owner,
+                retention_policy=args.retention,
+            )
+            if as_json:
+                return emit_json({"ok": result["lease_state"] == "ACTIVE", "lease": result})
+            print(_paint("scratch lease registered", BOLD))
+            print(f"  task={result['task_id']} state={result['lease_state']} "
+                  f"policy={result['retention_policy']}")
+            return 0 if result["lease_state"] == "ACTIVE" else 1
+        if lease_sub_cmd == "complete":
+            result = app.scratch_lease("complete", task_id=args.task)
+            if as_json:
+                return emit_json(result)
+            lease = result.get("lease") or {}
+            print(_paint("scratch lease completed", BOLD))
+            print(f"  task={args.task} ok={result.get('ok')} state={lease.get('lease_state')}")
+            cleanup = lease.get("cleanup") or {}
+            print(f"  cleanup: requested={cleanup.get('requested')} {cleanup.get('detail') or ''}")
+            return 0 if result.get("ok") else 1
+        result = app.scratch_lease("list", task_id="")
+        if as_json:
+            return emit_json(result)
+        print(_paint("scratch leases", BOLD))
+        leases = result.get("leases") or []
+        if not leases:
+            print("  no leases recorded")
+        for record in leases:
+            print(f"  {record.get('task_id')}: {record.get('lease_state')} "
+                  f"policy={record.get('retention_policy')} owner={record.get('owner')}")
+        return 0
     if sub == "route":
         try:
             job = json.loads(args.job)

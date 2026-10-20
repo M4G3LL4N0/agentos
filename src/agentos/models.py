@@ -442,6 +442,7 @@ class EventType(StrEnum):
     FEDERATION_RESULT_RECEIVED = "federation.result_received"
     VERIFICATION_REQUIRED = "verification.required"
     GOVERNOR_ROUTE_RECORDED = "governor.route_recorded"
+    RESOURCE_ADMISSION_DECIDED = "resource.admission_decided"
     USAGE_SNAPSHOT_IMPORTED = "usage.snapshot_imported"
     USAGE_ENTRY_RECORDED = "usage.entry_recorded"
     USAGE_ADVISORY = "usage.advisory"

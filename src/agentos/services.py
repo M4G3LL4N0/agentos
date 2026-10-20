@@ -2037,6 +2037,120 @@ class AgentOS:
             heavy=heavy,
         )
 
+    # ------------------------------------------------------------------
+    # NOAERTH resource contract (Phase 4B) — read-only snapshot seam
+    # ------------------------------------------------------------------
+
+    def resource_snapshot(
+        self, *, publish: bool = False, live: bool = False
+    ) -> dict[str, Any]:
+        """Publish, live-build, or read the resource contract snapshot.
+
+        - publish=True: build from sources and atomically publish the file
+          (cron verb). Bounded subprocess: one janitor call.
+        - live=True: build from sources without publishing (inspection).
+        - default: O(1) read of the published file only (no subprocesses).
+        """
+        from agentos.resource_contract import (
+            ResourcePaths,
+            build_snapshot,
+            read_snapshot,
+            write_snapshot,
+        )
+
+        paths = ResourcePaths.from_env()
+        if publish:
+            snapshot = build_snapshot(paths)
+            out = write_snapshot(snapshot, paths.snapshot_out)
+            return {"ok": True, "path": str(out), "mode": "publish", "snapshot": snapshot}
+        if live:
+            snapshot = build_snapshot(paths)
+            return {"ok": True, "path": paths.snapshot_out, "mode": "live", "snapshot": snapshot}
+        snapshot = read_snapshot(paths.snapshot_out)
+        if snapshot is None:
+            return {
+                "ok": False,
+                "error": "resource snapshot missing or unreadable at "
+                f"{paths.snapshot_out} (run: agentos governor snapshot --publish)",
+                "path": paths.snapshot_out,
+                "mode": "read",
+                "snapshot": None,
+            }
+        return {"ok": True, "path": paths.snapshot_out, "mode": "read", "snapshot": snapshot}
+
+    def worker_admission(
+        self,
+        profile: str = "heavyweight_coding",
+        bytes_needed: int = 0,
+        level: str = "MEDIUM",
+        provider_cooldown_until: float | None = None,
+    ) -> dict[str, Any]:
+        """Four-question admission decision from the published snapshot.
+
+        Every decision (admit or refuse) is recorded as an audit event.
+        Never starts, stops, or kills a process; never touches a scheduler.
+        """
+        from agentos.models import EventType
+        from agentos.resource_contract import ResourcePaths, read_snapshot
+        from agentos.worker_admission import admit_worker
+
+        paths = ResourcePaths.from_env()
+        snapshot = read_snapshot(paths.snapshot_out)
+        decision = admit_worker(
+            snapshot,
+            profile=profile,
+            bytes_needed=bytes_needed,
+            level=level,
+            provider_cooldown_until=provider_cooldown_until,
+        )
+        decision["snapshot_path"] = paths.snapshot_out
+        self.bus.emit(
+            EventType.RESOURCE_ADMISSION_DECIDED,
+            payload={
+                "profile": profile,
+                "level": level,
+                "bytes_needed": bytes_needed,
+                "can_start": decision["can_start"],
+                "constraining_resource": decision["constraining_resource"],
+                "retry_after_s": decision["retry_after_s"],
+                "resource_band": (snapshot or {}).get("resource_band", "UNKNOWN"),
+                "reason": decision["reason"],
+            },
+        )
+        return decision
+
+    def scratch_lease(
+        self,
+        action: str,
+        *,
+        task_id: str,
+        venture_id: str = "",
+        workspace: str = "",
+        scratch_root: str = "",
+        storage_budget: int = 0,
+        owner: str = "",
+        retention_policy: str = "disposable",
+        evidence: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """ServerOS scratch lease over the existing JanitorOS mechanism."""
+        from agentos.worker_admission import complete_scratch, list_leases, register_scratch
+
+        if action == "register":
+            return register_scratch(
+                task_id=task_id,
+                venture_id=venture_id,
+                workspace=workspace,
+                scratch_root=scratch_root,
+                storage_budget=storage_budget,
+                owner=owner or "agentos",
+                retention_policy=retention_policy,
+            )
+        if action == "complete":
+            return complete_scratch(task_id=task_id, evidence=evidence)
+        if action == "list":
+            return {"leases": list_leases()}
+        raise AgentOSError(f"unknown scratch lease action {action!r}")
+
     def governor_route(self, job_data: dict[str, Any]) -> dict[str, Any]:
         """Governor-routed job: gates via resolve_route, then cost ranking.
 
