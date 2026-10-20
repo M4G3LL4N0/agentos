@@ -1,0 +1,73 @@
+#!/bin/bash
+# AgentOS DR restore (Phase 3 §7).
+# Restores a dr-*.tar.gz backup into --target DIR (isolated by default).
+# Production restore requires --confirm-production AND the service stopped.
+# Never restores on top of a live database: target must not contain agentos.db
+# unless --force is given.
+set -euo pipefail
+
+usage() {
+    echo "Usage: $0 --target DIR [--force] [--confirm-production] <dr-archive.tar.gz>" >&2
+    exit 2
+}
+
+PROD_STATE="${AGENTOS_HOME:-/var/lib/agentos}"
+TARGET=""
+FORCE=0
+CONFIRM_PROD=0
+ARCHIVE=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --target) TARGET="${2:-}"; shift 2 ;;
+        --force) FORCE=1; shift ;;
+        --confirm-production) CONFIRM_PROD=1; shift ;;
+        -h|--help) usage ;;
+        *) ARCHIVE="$1"; shift ;;
+    esac
+done
+
+[ -n "$TARGET" ] && [ -n "$ARCHIVE" ] || usage
+[ -f "$ARCHIVE" ] || { echo "archive not found: $ARCHIVE" >&2; exit 1; }
+
+# production guard
+if [ "$TARGET" = "$PROD_STATE" ] && [ "$CONFIRM_PROD" != 1 ]; then
+    echo "refusing to restore into production state dir $PROD_STATE without --confirm-production" >&2
+    exit 1
+fi
+if [ "$CONFIRM_PROD" = 1 ] && systemctl is-active --quiet agentos; then
+    echo "refusing production restore while agentos.service is active (stop it first)" >&2
+    exit 1
+fi
+
+mkdir -p "$TARGET"
+if [ -e "$TARGET/agentos.db" ] && [ "$FORCE" != 1 ]; then
+    echo "target already contains agentos.db: $TARGET (use --force to replace)" >&2
+    exit 1
+fi
+
+tar -xzf "$ARCHIVE" -C "$TARGET"
+[ -f "$TARGET/agentos.db" ] || { echo "archive did not contain agentos.db" >&2; exit 1; }
+
+python3 - "$TARGET" <<'PY'
+import json
+import pathlib
+import sqlite3
+import sys
+
+target = pathlib.Path(sys.argv[1])
+conn = sqlite3.connect(str(target / "agentos.db"))
+integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+counts = {
+    t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+    for t in ("objectives", "executions", "events")
+}
+conn.close()
+if integrity != "ok":
+    raise SystemExit(f"restored db integrity failed: {integrity}")
+cfg = target / "config.json"
+patterns = 0
+if cfg.exists():
+    patterns = len(json.loads(cfg.read_text()).get("policy", {}).get("blocked_command_patterns", []))
+print(f"restore-ok target={target} integrity=ok counts={counts} policy_patterns={patterns}")
+PY
