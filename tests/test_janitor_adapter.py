@@ -112,6 +112,34 @@ class TestJanitorOSAdapter(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIn("not found", result["error"])
 
+    def test_invalid_negative_bytes_fails_closed_without_call(self) -> None:
+        from agentos.adapters.janitor import JanitorOSAdapter
+
+        adapter = JanitorOSAdapter()
+        with patch.object(adapter, "_run_janitor") as mock_run:
+            result = adapter.request_admission(-5)
+            self.assertFalse(result["ok"])
+            self.assertIn("invalid bytes_needed", result["error"])
+            mock_run.assert_not_called()
+
+    def test_invalid_bool_bytes_fails_closed(self) -> None:
+        from agentos.adapters.janitor import JanitorOSAdapter
+
+        adapter = JanitorOSAdapter()
+        with patch.object(adapter, "_run_janitor") as mock_run:
+            result = adapter.request_admission(True)  # type: ignore[arg-type]
+            self.assertFalse(result["ok"])
+            mock_run.assert_not_called()
+
+    def test_invalid_non_int_bytes_fails_closed(self) -> None:
+        from agentos.adapters.janitor import JanitorOSAdapter
+
+        adapter = JanitorOSAdapter()
+        with patch.object(adapter, "_run_janitor") as mock_run:
+            result = adapter.request_admission("1024")  # type: ignore[arg-type]
+            self.assertFalse(result["ok"])
+            mock_run.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

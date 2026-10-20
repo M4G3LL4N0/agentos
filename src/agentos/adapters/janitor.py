@@ -71,6 +71,10 @@ class JanitorOSAdapter:
             return {"ok": False, "error": str(exc)}
 
     def request_admission(self, bytes_needed: int) -> dict[str, Any]:
+        # invalid requests fail closed here, before any binary is invoked
+        # (the janitor itself accepts some malformed inputs generously)
+        if isinstance(bytes_needed, bool) or not isinstance(bytes_needed, int) or bytes_needed < 0:
+            return {"ok": False, "error": f"invalid bytes_needed: {bytes_needed!r}"}
         result = self._run_janitor(
             ["space", "admit", "--bytes", str(bytes_needed), "--json"]
         )
