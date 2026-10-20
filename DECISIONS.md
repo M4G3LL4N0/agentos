@@ -236,3 +236,63 @@ over serial after per-worker overhead; `coalesce_tasks` balances groups to
 sizes differing by at most 1.
 Consequence: small/fast task sets stay serial; no worker is spawned for
 appearance.
+
+## D-Phase3-1 — production state lives outside the code tree
+Context: Phase 2's `rsync --delete` incident proved code deploys must
+never be able to touch state; live state sat inside the code root.
+Decision: split by env-configured dirs — code `/srv/noaerth/agentos`,
+state `/var/lib/agentos` (`AGENTOS_HOME`), config `/etc/agentos`
+(`AGENTOS_CONFIG_DIR`, new `default_config_dir()` with home fallback),
+logs `/var/log/agentos`. Migration = copies only via the SQLite backup
+API; the old files remain as rollback artifacts.
+Consequence: deploys sync only `src/`+`tests/` with `--delete`; rollback
+is a wrapper/unit swap (drill-proven). Tests and local dev keep the
+single-home default — zero behaviour change for contributors.
+
+## D-Phase3-2 — share one JanitorOS binary; never traverse /home/portfolio
+Context: the service account had no janitor (silent DELEGATE failures);
+the real binary lived only under `/home/portfolio`.
+Decision: install a byte-identical copy at `/usr/local/bin/janitor`
+(root:root 755) and create `/home/agentos` (750) for the knowledge
+store; the adapter fails closed on missing binary, bad rc, malformed or
+invalid requests (negative/bool/non-int bytes rejected pre-invocation).
+Consequence: admission stays enforced under the hardened unit with no
+home-directory traversal; a future janitor upgrade must replace BOTH
+copies in lockstep.
+
+## D-Phase3-3 — host governor: measured-only signals, hysteresis, CRITICAL exits only via RECOVERING
+Context: disk/load spikes previously degraded ad-hoc (janitors stacked
+until the box fell over); any new gate must not flap or invent data.
+Decision: HEALTHY/PRESSED/CRITICAL/RECOVERING from measured disk/load/
+mem/swap only — unmeasured signals stay None and are excluded, never
+assumed healthy or unhealthy; immediate degradation on entry thresholds,
+upgrades require exit thresholds + 300s dwell, CRITICAL → RECOVERING
+only (straight CRITICAL→HEALTHY forbidden), relapse immediate;
+gate sits at loop DELEGATE before the janitor check.
+Consequence: small work continues in PRESSED (verified live: disk 17%
+free admits), all new work stops in CRITICAL (verified via injected
+thresholds — prod config untouched). Thresholds are config-overridable
+per deployment.
+
+## D-Phase3-4 — backup via SQLite API; restore isolated by default
+Context: file-copy backups of a WAL database are unsafe; restoring on
+top of prod would destroy the thing being protected.
+Decision: backups use `backup()` (consistent snapshot) for both the DR
+layer (full file set tarred) and portable exports (secrets excluded);
+restore defaults to an isolated target and refuses an existing target
+without `--force` and the production dir without `--confirm-production`
++ stopped service. Never `cp` the live db.
+Consequence: DR drill proved counts 2/1/42 + 12 policy patterns in an
+isolated dir while production stayed serving. 14-archive retention,
+daily 03:17 cron, ledger for audit.
+
+## D-Phase3-5 — syscall filtering and MemoryDenyWriteExecute deferred
+Context: hardening under the actual service account must not break the
+worker model (children spawn opencode/node).
+Decision: apply the static Protect*/capability/address-family set that a
+9-point sandbox probe verified under the service identity; explicitly
+defer seccomp syscall filters and MDWE until worker execution is either
+re-architected or probed against the full child-process set. The unit
+comment states both omissions.
+Consequence: hardening is real but bounded — documented gap rather than
+silent risk; revisit with a probe when workers change.

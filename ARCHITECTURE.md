@@ -1,12 +1,15 @@
 # AgentOS Architecture
 
-Living document. Describes the implemented v0.5.0 release surface (710 tests).
+Living document. Describes the implemented v0.5.0 release surface (872 tests;
+production layout in `deploy/SERVER_OPS.md`, Phase 3 report in `PHASE3_ACCEPTANCE.md`).
 
 ## Runtime shape
 
 Lightweight Python processes (stdlib only, no runtime dependencies).
 State lives in one embedded sqlite database (`$AGENTOS_HOME/agentos.db`,
-default `~/.agentos/`), accessed via per-thread connections (WAL) so the
+default `~/.agentos/`; production: `/var/lib/agentos`, config in
+`/etc/agentos` via `AGENTOS_CONFIG_DIR`), accessed via per-thread
+connections (WAL) so the
 API server and parallel plan execution are safe. Interfaces: CLI, HTTP API
 (`agentos serve`, loopback, no auth in v1), MCP stdio (`agentos mcp`) —
 all three call the same `services.AgentOS` core. No containers, no cloud.

@@ -480,3 +480,84 @@ and repaired cli.py (recorded verbatim — see CURRENT_STATE.md):
 - Disk: 87% used; 396 `/tmp/tmp*` agentos test homes (~724M) left by test
   runs — flagged for operator-authorized cleanup, not removed.
 - Paid provider calls: 0. Pushes: 0.
+
+## Phase 3 — production hardening, storage safety, DR (2026-10-20, 872 tests)
+
+Baseline first: host/service healthy (NRestarts=0, 18.4MB), API
+`{"ok":true,"healthy":true,"version":"0.5.0"}`, DB integrity ok (39
+tables, 2 objectives / 1 execution / 42 events), **no backups existed**,
+load ~135 on 6 cores.
+
+Load investigation (lightweight only): `noaerth-disk-watch` wrote its 6h
+re-fire guard AFTER launching the heavy janitor → every `*/5` tick
+stacked a new janitor while disk ≥75% (277 janitors, 123 disk-watches);
+each heavy janitor's full-tree `find … node_modules` walk never finished
+under self-contention (120 stuck finds, 6–13h old) → sy 77–82%, r=69–95.
+Secondary: cron env lacks `USER` → janitor's `/tmp` cleanup subshell died
+every run (`USER: unbound variable`). Fixes (backed up as
+`*.bak-20261020`, `bash -n` checked): guard state written before launch +
+`flock -n` single-instance janitor; `${USER:-$(id -un)}`. Mitigation
+order honored: disk-watches TERMed before janitors. Result: load
+135 → 4.18 across 3 post-fix cron ticks, zero respawn, zombies 0.
+
+JanitorOS repair for the service account: byte-identical copy of the
+real binary to `/usr/local/bin/janitor` (root:root 755, no
+`/home/portfolio` traversal), `/home/agentos` (750) created for the
+knowledge store. Admission matrix green as `agentos` AND under systemd:
+granted / refused(rc75) / threshold / unavailable / permission-denied /
+malformed / invalid-request (adapter now rejects negative/bool/non-int
+before invoking the binary — fail closed).
+
+/tmp inventory (dry-run, zero deletions): `/root/phase3/tmp-manifest.tsv`
+— 10,078 entries / 508MB: 394 CONFIRMED_DISPOSABLE (92MB, our test
+windows), 9,664 UNKNOWN (other-service `paios*`/`mee*` workdirs +
+toolchains — out of scope), 17 ACTIVE_PROTECTED (live fds/systemd-private).
+
+State separation: code `/srv/noaerth/agentos` vs state `/var/lib/agentos`
+(AGENTOS_HOME), config `/etc/agentos` (new `AGENTOS_CONFIG_DIR` env,
+`default_config_dir()` with home fallback — 3 tests), logs
+`/var/log/agentos`. Migration = copies only via SQLite backup API; old
+files kept as rollback artifacts; **rollback drill proven both
+directions** (old layout → counts 2/1/42 → new layout → same). Wrapper +
+templates updated (`agentos.service`, `agentos.env`, `install.sh`,
+`noaerth-agentos`).
+
+Backup/restore: `noaerth-agentos-backup` (DR full-file via backup API +
+portable secrets-excluded export + ledger + 14-retention, root cron
+03:17 → `/var/log/agentos/backup.log`) and `noaerth-agentos-restore`
+(isolated default; refuses prod without `--confirm-production` + stopped
+service; refuses existing target without `--force`). Isolated drill:
+DR → integrity ok/counts 2/1/42/policy 12; portable → fresh db counts
+match; CLI usable against restored env; guards verified.
+
+Safe deployment: `deploy/safe-deploy.sh` — preflight (local suite,
+remote health/disk/JanitorOS admission) → release snapshot (code tar +
+SQLite-backup db, 3 kept) → sync (`--delete` ONLY in `src/`+`tests/`,
+state excluded) → install → health gate → ERR-trap rollback.
+`tests/test_deploy_safety.py` (11) encodes the Phase 2 `rsync --delete`
+incident as permanent guards. Pipeline proven live (DEPLOY_OK ×4).
+
+Host resource governor (new `host_governor.py` +18 tests): bands
+HEALTHY/PRESSED/CRITICAL/RECOVERING from measured disk/load/mem/swap
+only; entry vs exit thresholds + 300s dwell hysteresis; CRITICAL exits
+only via RECOVERING; RECOVERING relapses immediately; bounded persisted
+history (`governor_state.json`). Wired: loop DELEGATE (refuses before
+janitor), `host_status`/`host_admission` services, CLI `governor host` /
+`host-admission` (exit 1 on refusal). Live band PRESSED (disk 17.04%
+free); injected-threshold CRITICAL denied admission and the loop
+refused — no prod config mutated.
+
+systemd hardening: `StartLimit*` moved to `[Unit]` (warning gone),
+NoNewPrivileges, PrivateTmp, ProtectSystem=strict, ProtectHome=read-only,
+ReadWritePaths (var/lib, etc, home/agentos, var/log), ProtectKernel*,
+RestrictSUIDSGID, LockPersonality, CapabilityBoundingSet=,
+RestrictAddressFamilies. 9-point sandbox probe green BEFORE applying.
+Syscall filters / MemoryDenyWriteExecute intentionally not applied
+(worker children spawn opencode/node) — stated in the unit.
+
+Operational verification: 7/7 endpoints 200; restart persistence; one
+full loop cycle under separated state (9/9 stages, `obj_76a9ee640521`
+COMPLETED+VERIFIED, loop_state in `/var/lib`, old rollback copy
+byte-identical); fresh backup + both restores round-tripped; pressure
+sim via injected thresholds. 872 tests OK local (199s) + server (135s).
+Paid calls: 0. Pushes: 0. Unverified deletions: 0.

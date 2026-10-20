@@ -247,6 +247,56 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
       (mocked shape had hidden it), tower 24-row overflow crash
       (`_SafeScr` proxy + section truncation)
 
+## Production hardening (Phase 3, 2026-10-20, 837 → 872 tests)
+
+- [x] Baseline + load investigation: load ~135 root-caused (disk-watch
+      guard written after launch → janitor stacking on every `*/5` tick,
+      contention-blocked `find node_modules` walks, `USER` unbound in cron)
+- [x] Load mitigation + durable fix (TERM order: finds → disk-watches →
+      janitors; state-before-launch + `flock -n`; `${USER:-$(id -un)}`);
+      135 → ~4, zero respawn across 3 cron ticks, zombies 0
+- [x] JanitorOS repair under service identity (byte-identical shared
+      binary `/usr/local/bin/janitor`, `/home/agentos` knowledge dir;
+      granted/refused/threshold/unavailable/permission/malformed/invalid
+      matrix green as `agentos` and under systemd)
+- [x] `/tmp` dry-run inventory (`/root/phase3/tmp-manifest.tsv`): 394
+      CONFIRMED_DISPOSABLE / 9,664 UNKNOWN / 17 ACTIVE_PROTECTED;
+      zero deletions
+- [x] State separation: `/var/lib/agentos` (AGENTOS_HOME) + `/etc/agentos`
+      (AGENTOS_CONFIG_DIR, `default_config_dir()`) + `/var/log/agentos`;
+      SQLite-backup-API migration, rollback drill green both directions
+      (+3 tests)
+- [x] Backup/restore: `deploy/noaerth-agentos-backup` (DR full-file +
+      portable export + ledger + 14 retention, root cron 03:17) and
+      `deploy/noaerth-agentos-restore` (isolated default, prod guard);
+      isolated restore drill green both layers
+- [x] Safe deployment: `deploy/safe-deploy.sh` (preflight → snapshot →
+      state-excluded sync → health gate → ERR-trap rollback);
+      `tests/test_deploy_safety.py` (+11) locks the Phase 2 rsync
+      incident as permanent guards; live DEPLOY_OK ×4
+- [x] Host resource governor: `src/agentos/host_governor.py` —
+      HEALTHY/PRESSED/CRITICAL/RECOVERING, measured-only signals,
+      entry/exit thresholds + dwell hysteresis, persisted bounded
+      history; loop DELEGATE gate, `host_status`/`host_admission`,
+      CLI `governor host` (+18 tests); live band PRESSED, simulated
+      CRITICAL denies
+- [x] systemd hardening: StartLimit* in [Unit], NoNewPrivileges,
+      PrivateTmp, ProtectSystem=strict, ProtectHome=read-only,
+      ReadWritePaths, ProtectKernel*, RestrictSUIDSGID, LockPersonality,
+      CapabilityBoundingSet=, RestrictAddressFamilies; 9-point sandbox
+      probe green before apply; syscall filters + MDWE deliberately
+      deferred (opencode/node worker children) — stated in unit
+- [x] Operational verification: 7/7 endpoints 200, restart persistence,
+      full 9-stage loop cycle under separated state (old rollback copy
+      byte-identical), fresh backup + both restore layers round-tripped,
+      pressure sim via injected thresholds; 872 tests OK local (199s)
+      + server (135s)
+
+New files: `src/agentos/host_governor.py`, `deploy/safe-deploy.sh`,
+`deploy/noaerth-agentos-backup`, `deploy/noaerth-agentos-restore`,
+`tests/test_host_governor.py`, `tests/test_deploy_safety.py`.
+Evidence: `PHASE3_ACCEPTANCE.md`, `/root/phase3/*` on the server.
+
 ## NEXT (highest leverage first)
 
 1. **Part 2 planning** — federation economics/negotiation across remote

@@ -1,15 +1,87 @@
 # AgentOS Current State
 
-Living document — reflects reality as of 2026-10-19 (Phase 2 live tower +
-autonomous operations; 830 tests green).
+Living document — reflects reality as of 2026-10-20 (Phase 3 production
+hardening; 872 tests green, local + server).
 If this file and behaviour disagree, behaviour wins; fix this file.
 
 ## Status: genuinely useful universal Agent Engine (local)
 
 `agentos` installs (`pip install -e .`) and works through **CLI, HTTP API
-and MCP stdio** against one shared core. 830 automated tests pass. Runtime
+and MCP stdio** against one shared core. 872 automated tests pass. Runtime
 verified end-to-end with real detections, real executions, a deliberate
 failure with recovery, a policy refusal, and restart persistence.
+
+## Phase 3: production hardening (2026-10-20, 872 tests)
+
+- **Load incident (root-caused + fixed):** `noaerth-disk-watch` wrote its
+  6h re-fire guard *after* launching `noaerth-storage-janitor heavy`, so
+  every `*/5` cron tick stacked a new janitor while disk ≥75% — 277
+  janitors + 123 disk-watches + 120 stuck `find node_modules` walks drove
+  load to ~135 on 6 cores. Fixed: state written before launch + `flock -n`
+  single-instance janitor; cron env lacks `USER` (janitor line-58 unbound
+  variable killed the `/tmp` cleanup subshell every run) — now
+  `${USER:-$(id -un)}`. Verified: 3+ cron ticks post-fix with zero
+  respawn, load 135 → 4.18, zombies 0.
+- **JanitorOS access repair (service identity):** byte-identical copy of
+  the JanitorOS binary at `/usr/local/bin/janitor` (root:root 755) +
+  `/home/agentos` (750) for the knowledge store — no broad `/home/portfolio`
+  access. Full admission matrix green as `agentos` and under systemd:
+  granted, refused (rc 75), threshold-exceeded, unavailable,
+  permission-denied, malformed, invalid (negative/bool/non-int rejected at
+  the adapter, fail closed).
+- **/tmp inventory (dry-run, nothing deleted):** 10,078 entries / 508MB
+  categorized in `/root/phase3/tmp-manifest.tsv` — 394 CONFIRMED_DISPOSABLE
+  test homes (92MB, our test windows), 3 POSSIBLY_DISPOSABLE, 9,664 UNKNOWN
+  (415MB — 9,485 `paios*` + 154 `mee*` other-service workdirs, toolchains),
+  17 ACTIVE_PROTECTED (live fds + systemd-private + session).
+- **State separation (implemented + rollback-drilled):** production state
+  now lives in `/var/lib/agentos` (db, loop_state, governor_state),
+  config in `/etc/agentos` (`AGENTOS_CONFIG_DIR`, 12 blocked-pattern
+  policy entries), file logs in `/var/log/agentos`; code stays in
+  `/srv/noaerth/agentos` (incl. the AutonomousOS exchange `state/` dir).
+  Migration used the SQLite backup API; old files kept as rollback
+  artifacts; drill proven both directions (old layout live → new layout
+  live, counts 2/1/42 both ways).
+- **Backup + restore (both layers, isolated-restore tested):**
+  `/usr/local/bin/noaerth-agentos-backup` daily 03:17 root cron → DR
+  full-file tar (SQLite backup API) + portable secrets-excluded export,
+  ledger + 14-archive retention. Restore drill: DR → isolated dir
+  (integrity ok, counts 2/1/42, policy 12), portable → fresh db, full
+  CLI usable against restored env; guards refuse production target and
+  existing-db overwrite.
+- **Safe deployment (`deploy/safe-deploy.sh`):** preflight (local suite,
+  remote health/disk/JanitorOS storage admission) → release snapshot
+  (code tar + SQLite-backup db) → sync with `--delete` restricted to
+  `src/`+`tests/` and state excluded → install → health gate → ERR-trap
+  rollback. 11 state-deletion regression tests. Pipeline proven live
+  (DEPLOY_OK ×4).
+- **Host resource governor (new, additive):** `host_governor.py` —
+  HEALTHY / PRESSED / CRITICAL / RECOVERING from measured disk/load/mem/
+  swap only (unmeasured signals stay None, never invented), entry vs exit
+  thresholds + dwell-time hysteresis, CRITICAL exits only via
+  RECOVERING, state in `governor_state.json` (bounded history). Wired at
+  loop DELEGATE (refuses before janitor), services `host_status` /
+  `host_admission`, CLI `governor host` / `governor host-admission`.
+  Live: band PRESSED (disk 17.04% free, load 1.52–2.44/cpu); simulated
+  CRITICAL denied admission and the loop DELEGATE refused. 18 tests.
+- **systemd hardening (probe-verified):** `StartLimit*` moved to `[Unit]`
+  (journal warning gone); `NoNewPrivileges`, `PrivateTmp`,
+  `ProtectSystem=strict`, `ProtectHome=read-only`, `ReadWritePaths`
+  (`/var/lib/agentos /etc/agentos /home/agentos /var/log/agentos`),
+  `ProtectKernel*`, `RestrictSUIDSGID`, `LockPersonality`,
+  `CapabilityBoundingSet=`, `RestrictAddressFamilies`. 9-point sandbox
+  probe (state/config/home/tmp writes, code read, janitor admit, API
+  reach, db read) all green before applying. Syscall filters and
+  `MemoryDenyWriteExecute` intentionally NOT applied (worker model spawns
+  opencode/node children) — documented in the unit.
+- **Operational verification (all green):** 7/7 API endpoints 200;
+  restart persistence (counts + loop_state); one full autonomous-loop
+  cycle under the separated state (9/9 stages, `obj_76a9ee640521`
+  COMPLETED+VERIFIED, loop_state written to `/var/lib` while the old
+  rollback copy stayed byte-identical); fresh backup + both restore
+  layers round-tripped; pressure simulation via injected thresholds (no
+  prod config mutation). 872 tests OK locally (199s) and on server (135s).
+- Paid provider calls: 0. Pushes: 0. Deletions of unverified files: 0.
 
 ## Phase 2: live tower + autonomous operations (2026-10-19, 830 tests)
 
