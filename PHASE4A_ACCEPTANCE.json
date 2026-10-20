@@ -1,0 +1,234 @@
+{
+  "phase": "4A",
+  "title": "Production baseline and release integrity",
+  "date": "2026-10-20",
+  "server": {
+    "name": "vmi3635094",
+    "host": "100.127.182.126",
+    "os": "Ubuntu 24.04.5",
+    "cpus": 6
+  },
+  "result": "PASS_WITH_FINDINGS",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "informational",
+      "detail": "Concurrent operator (portfolio@100.80.236.70) created JanitorOS Reactor (Phase 7) at 22:10, ran two duplicate instances transiently (load 3.4->7.7), then self-resolved to a single */15 cron. Preserved untouched; verified settled: 0 janitors/0 reactors/0 zombies, load 3.53."
+    },
+    {
+      "id": "F2",
+      "severity": "fixed_in_phase",
+      "detail": "Backup/restore scripts lacked exec bits in repo and server tree; chmod 755 applied, git mode 100755."
+    }
+  ],
+  "commits": {
+    "branch": "main",
+    "pushed": false,
+    "parent": "9503527",
+    "chain": [
+      {
+        "sha": "2877bdb",
+        "group": "process/service lifecycle: state separation + systemd hardening"
+      },
+      {
+        "sha": "e84b639",
+        "group": "JanitorOS service identity and safety"
+      },
+      {
+        "sha": "3a5ba5b",
+        "group": "host resource governor"
+      },
+      {
+        "sha": "92a3b88",
+        "group": "backup, recovery, safe deployment"
+      },
+      {
+        "sha": "fb1ac3b",
+        "group": "tests, operational documentation"
+      }
+    ],
+    "files_committed": 23,
+    "exact_file_staging": true,
+    "worktree_clean_after": true,
+    "other_branches_touched": false
+  },
+  "source_integrity": {
+    "authoritative_repo": "/Users/matador/startups/agentos",
+    "deployment_root": "/srv/noaerth/agentos",
+    "files_reviewed": 23,
+    "unrelated_changes": 0,
+    "secrets_found": 0,
+    "generated_artifacts_staged": 0,
+    "accidental_deletions": 0,
+    "whitespace_check": "clean (git diff --check rc=0)",
+    "concurrent_repo_modifications_during_review": 0,
+    "rollback_artifacts_verified_present": true
+  },
+  "verification": {
+    "test_suite_local": {
+      "ran": 872,
+      "ok": 872,
+      "seconds": 137
+    },
+    "focused_suites": {
+      "ran": 49,
+      "ok": 49
+    },
+    "source_matches_git_state": {
+      "tracked_files": 211,
+      "mismatches": 0,
+      "missing": 0,
+      "note": "7 post-deploy doc files rsynced (no --delete, no restart); server tree has no .git, local git is authority"
+    },
+    "service_definition_matches_repo": true,
+    "service_status": {
+      "state": "active",
+      "substate": "running",
+      "nrestarts": 0,
+      "health_ok": true
+    },
+    "cron": {
+      "identities": {
+        "backup": "root",
+        "janitor_diskwatch_reactor": "portfolio",
+        "agentos_user": "none"
+      },
+      "duplicate_agentos_cleanup_authorities": 0,
+      "counts": {
+        "disk_watch": 1,
+        "storage_janitor": 1,
+        "agentos_backup": 1,
+        "reactor": 1
+      },
+      "sources_checked": [
+        "root crontab",
+        "portfolio crontab",
+        "agentos crontab",
+        "/etc/cron.d",
+        "/etc/crontab",
+        "systemd timers"
+      ]
+    },
+    "runaway_processes": {
+      "janitors": 0,
+      "reactors": 0,
+      "disk_watches": 0,
+      "stuck_finds": 0,
+      "zombies": 0,
+      "verified_at_utc": "2026-10-20T20:27:47Z",
+      "probe": "heredoc ps/grep bracket patterns, zero self-match",
+      "transient_episode": "22:10-22:26 concurrent actor duplicate reactors; exited without intervention"
+    },
+    "isolated_restore": {
+      "archive": "dr-20261020T201908Z",
+      "target": "/root/phase4a/restore-test",
+      "integrity": "ok",
+      "counts": {
+        "objectives": 2,
+        "executions": 2,
+        "events": 61
+      },
+      "policy_patterns": 12,
+      "existing_target_guard": "refused without --force",
+      "production_untouched": true
+    },
+    "backup_protection": {
+      "archives": 6,
+      "world_writable_files": 0,
+      "owner": "root:root",
+      "rollback_artifacts_present": true,
+      "ledger_present": true
+    },
+    "governor": {
+      "HEALTHY": {
+        "verified_by": "tests.test_host_governor synthetic",
+        "pass": true
+      },
+      "PRESSED": {
+        "verified_by": "live read-only governor host",
+        "band": "PRESSED",
+        "admit_small": true,
+        "disk_free_pct": 16.58
+      },
+      "CRITICAL": {
+        "verified_by": "synthetic metrics, no prod injection",
+        "admit": false,
+        "pass": true
+      },
+      "RECOVERING": {
+        "verified_by": "synthetic transition tests",
+        "pass": true
+      },
+      "hysteresis": {
+        "dwell_enforced": true,
+        "critical_exits_only_via_recovering": true,
+        "relapse_immediate": true,
+        "pass": true
+      },
+      "fail_closed_admission": {
+        "loop_delegate_refusal": "verified Phase 3",
+        "invalid_janitor_request": "verified"
+      }
+    },
+    "disruptive_load_injected": false
+  },
+  "production_snapshot_utc": {
+    "at": "2026-10-20T20:28:13Z",
+    "load_1_5_15": [
+      3.53,
+      3.82,
+      4.22
+    ],
+    "cpus": 6,
+    "cpu_idle_pct": 47,
+    "cpu_user_pct": 20,
+    "cpu_sys_pct": 32,
+    "cpu_iowait_pct": 1,
+    "mem_available_mib": 10669,
+    "mem_total_mib": 11960,
+    "swap_used_mib": 566,
+    "disk_used_bytes": 85987303424,
+    "disk_total_bytes": 102888095744,
+    "disk_free_bytes": 16884015104,
+    "disk_used_pct": 83.6,
+    "governor_band": "PRESSED",
+    "active_workers": 0,
+    "agentos_processes": 1
+  },
+  "tmp_policy": {
+    "manifest": "PHASE4A_TMP_APPROVAL_MANIFEST.md",
+    "inventory_source": "/root/phase3/tmp-manifest.tsv",
+    "approved_paths": 394,
+    "rejected_active": 0,
+    "rejected_uncertain_unknown": 9667,
+    "active_protected_rejected": 17,
+    "expected_reclaimed_bytes": 96518144,
+    "fresh_proc_scan_no_live_refs": true,
+    "confidence": "HIGH",
+    "deletion_performed": false,
+    "awaiting": "operator sign-off"
+  },
+  "rollback": {
+    "state_separation": "restore /root/phase3/agentos.service.pre-separation + noaerth-agentos.pre-separation; old tree serves 2/1/42 (drill-proven)",
+    "hardening": "restore /root/phase3/agentos.service.pre-hardening",
+    "data": "noaerth-agentos-restore with dr-*.tar.gz (isolated default; --confirm-production + stopped service for prod)",
+    "code": "git revert 2877bdb e84b639 3a5ba5b 92a3b88 fb1ac3b (local only; push on instruction)"
+  },
+  "compliance": {
+    "pushes": 0,
+    "paid_calls": 0,
+    "unverified_deletions": 0,
+    "tmp_candidates_deleted": 0,
+    "restore_over_prod": 0,
+    "disruptive_load": 0,
+    "other_actor_kills": 0,
+    "other_actor_files_modified": 0
+  },
+  "open_items": [
+    "Operator sign-off for /tmp manifest execution (394 paths, 92 MiB)",
+    "Observe reactor */15 cron vs disk-watch */5 interplay for 24h",
+    "Push only on explicit instruction (main is 25 commits ahead of origin)",
+    "Deferred: syscall-filter/MDWE re-probe with worker model; dual janitor binary lockstep upgrades"
+  ],
+  "ready_for": "Phase 4B"
+}
