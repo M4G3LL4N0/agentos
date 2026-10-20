@@ -686,6 +686,8 @@ def write_snapshot(snapshot: dict[str, Any], path: str | Path | None = None) -> 
         raise ValueError("resource snapshot exceeds 64KB bound")
     tmp = out.with_suffix(out.suffix + ".tmp")
     tmp.write_text(body, encoding="utf-8")
+    # world-readable: cross-user consumers (control collector, hive) read it
+    os.chmod(tmp, 0o644)
     os.replace(tmp, out)
     return out
 
