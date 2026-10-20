@@ -3,7 +3,8 @@
 # Usage: noaerth agentos <command> [args]
 set -euo pipefail
 
-AGENTOS_HOME="${AGENTOS_HOME:-/srv/noaerth/agentos}"
-export AGENTOS_HOME
+AGENTOS_HOME="${AGENTOS_HOME:-/var/lib/agentos}"
+AGENTOS_CONFIG_DIR="${AGENTOS_CONFIG_DIR:-/etc/agentos}"
+export AGENTOS_HOME AGENTOS_CONFIG_DIR
 
 exec agentos "$@"

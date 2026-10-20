@@ -2,24 +2,41 @@
 Description=AgentOS Execution Service
 After=network.target
 Wants=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=simple
 User=agentos
 Group=agentos
+StateDirectory=agentos
 WorkingDirectory=/srv/noaerth/agentos
-Environment=AGENTOS_HOME=/srv/noaerth/agentos
+Environment=AGENTOS_HOME=/var/lib/agentos
+Environment=AGENTOS_CONFIG_DIR=/etc/agentos
 Environment=PYTHONUNBUFFERED=1
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 -m agentos serve --host 127.0.0.1 --port 8765
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5
-StartLimitBurst=3
-StartLimitIntervalSec=60
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=agentos
+# Phase 3 §10 hardening. Worker model spawns child processes (opencode/node),
+# so no syscall filters or MemoryDenyWriteExecute — documented as out of scope.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/agentos /etc/agentos /home/agentos /var/log/agentos
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]
 WantedBy=multi-user.target

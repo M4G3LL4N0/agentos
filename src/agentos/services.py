@@ -7,6 +7,7 @@ Business logic lives here and in the engine — never duplicated in the CLI.
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -78,12 +79,17 @@ HUMAN_ATTENTION_REASONS = (
 
 
 def default_home() -> Path:
-    import os
-
     override = os.environ.get("AGENTOS_HOME")
     if override:
         return Path(override).expanduser()
     return Path.home() / DEFAULT_HOME_NAME
+
+
+def default_config_dir(home: Path) -> Path:
+    override = os.environ.get("AGENTOS_CONFIG_DIR")
+    if override:
+        return Path(override).expanduser()
+    return home
 
 
 class AgentOS:
@@ -92,7 +98,7 @@ class AgentOS:
     def __init__(self, home: str | Path | None = None) -> None:
         self.home = Path(home).expanduser() if home else default_home()
         self.db_path = self.home / "agentos.db"
-        self.config_path = self.home / "config.json"
+        self.config_path = default_config_dir(self.home) / "config.json"
         self.config = self._load_config()
         self.policy = ExecutionPolicy.from_dict(self.config.get("policy"))
         self.store = Store(self.db_path)
@@ -189,7 +195,7 @@ class AgentOS:
         return pinned if pinned else utc_now_iso()
 
     def _save_config(self) -> None:
-        self.home.mkdir(parents=True, exist_ok=True)
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_path.write_text(
             json.dumps(self.config, indent=2), encoding="utf-8"
         )
@@ -2002,6 +2008,34 @@ class AgentOS:
                 "safety gates"
             ),
         }
+
+    def _host_governor(self) -> Any:
+        from agentos.host_governor import HostGovernor
+
+        return HostGovernor(self.home, config=self.config)
+
+    def host_status(self) -> dict[str, Any]:
+        """Evaluate the host resource band from live measured signals."""
+        from agentos.host_governor import collect_metrics
+
+        gov = self._host_governor()
+        metrics = collect_metrics(self.home)
+        state = gov.evaluate(metrics)
+        result = gov.admission(metrics=metrics, state=state)
+        result["since"] = state.since
+        result["history"] = state.history[-10:]
+        return result
+
+    def host_admission(self, bytes_needed: int = 0, heavy: bool = False) -> dict[str, Any]:
+        """Band-aware admission for new work (CRITICAL fails closed)."""
+        from agentos.host_governor import collect_metrics
+
+        gov = self._host_governor()
+        return gov.admission(
+            metrics=collect_metrics(self.home),
+            bytes_needed=bytes_needed,
+            heavy=heavy,
+        )
 
     def governor_route(self, job_data: dict[str, Any]) -> dict[str, Any]:
         """Governor-routed job: gates via resolve_route, then cost ranking.
