@@ -350,7 +350,12 @@ class AutonomousLoop:
                 return False, "no READY providers"
             return True, f"routed: {ready[0]['id']}"
         if stage == LoopStage.DELEGATE:
-            # storage + resource admission before delegating
+            # host-resource, then storage, admission before delegating
+            host = getattr(self.app, "host_admission", None)
+            if host:
+                decision = host(bytes_needed=1024 * 1024)
+                if not decision.get("admit", True):
+                    return False, f"host governor refused: {decision.get('reason')}"
             from agentos.adapters.janitor import JanitorOSAdapter
 
             jan = JanitorOSAdapter()

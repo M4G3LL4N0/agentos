@@ -566,6 +566,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_gverify.add_argument("--job", required=True, dest="job_id")
     p_gverify.add_argument("--status", required=True, help="VERIFIED or FAILED")
     p_gverify.add_argument("--evidence", action="append", default=None)
+    gov_sub.add_parser("host", help="host resource band from measured signals")
+    p_ghost = gov_sub.add_parser(
+        "host-admission", help="band-aware admission for new work (exit 1 if refused)"
+    )
+    p_ghost.add_argument("--bytes", type=int, default=0, dest="bytes_needed")
+    p_ghost.add_argument("--heavy", action="store_true")
 
     p_sup = sub.add_parser(
         "supervisor", help="supervisor operating model: honest chain status"
@@ -1931,6 +1937,22 @@ def cmd_governor(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
         for factor, weight in sorted(result["weights"].items()):
             print(f"  {factor}: {weight}")
         return 0
+    if sub == "host":
+        result = app.host_status()
+        if as_json:
+            return emit_json(result)
+        print(_paint(f"host governor: {result['band']}", BOLD))
+        print(f"  admit: {result['admit']} — {result['reason']}")
+        for key, value in (result.get("metrics") or {}).items():
+            print(f"  {key}: {value}")
+        return 0
+    if sub == "host-admission":
+        result = app.host_admission(bytes_needed=args.bytes_needed, heavy=args.heavy)
+        if as_json:
+            return emit_json(result)
+        print(_paint("host admission", BOLD))
+        print(f"  band={result['band']} admit={result['admit']} — {result['reason']}")
+        return 0 if result["admit"] else 1
     if sub == "route":
         try:
             job = json.loads(args.job)
