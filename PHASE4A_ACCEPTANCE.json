@@ -230,5 +230,6 @@
     "Push only on explicit instruction (main is 25 commits ahead of origin)",
     "Deferred: syscall-filter/MDWE re-probe with worker model; dual janitor binary lockstep upgrades"
   ],
-  "ready_for": "Phase 4B"
+  "ready_for": "Phase 4B",
+  "record_commit": "d69fca7"
 }

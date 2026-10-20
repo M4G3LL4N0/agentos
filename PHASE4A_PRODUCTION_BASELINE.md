@@ -18,7 +18,7 @@ committed locally (no push).
 | `3a5ba5b` | feat(governor): measured-only host resource governor with hysteresis |
 | `92a3b88` | feat(deploy): backup/restore tooling and safe deployment pipeline |
 | `fb1ac3b` | docs(phase3): runbooks, decisions, module map, and acceptance evidence |
-| *this file's commit* | docs(phase4a): production baseline and acceptance record (+ tmp approval manifest) |
+| `d69fca7` | docs(phase4a): production baseline and acceptance record (+ tmp approval manifest) |
 
 Staged with exact-file lists per commit (never `add -A`); worktree clean
 after committing; `git diff --check` clean; no tracked deletions; no
