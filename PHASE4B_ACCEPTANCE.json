@@ -72,6 +72,6 @@
     "cron": "remove single crontab line; snapshot file is inert"
   },
   "constraints_honored": ["no new scheduler", "no new task db", "no paid inference", "no push", "no destructive cleanup", "no worker started/killed", "no other agent task/worktree touched", "bounded outputs", "explicit UNKNOWN"],
-  "record_commit": "pending-docs-commit",
+  "record_commit": "9a53c03",
   "sign_off": "operator review of PHASE4B_GOVERNOR_INTEGRATION.md + this record"
 }
