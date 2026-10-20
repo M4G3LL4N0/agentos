@@ -128,19 +128,34 @@ class TestSnapshotContract(unittest.TestCase):
         self.assertEqual(snap["resource_band"], UNKNOWN)
         self.assertEqual(snap["storage_admission"], UNKNOWN)
         self.assertEqual(snap["disk_growth"], UNKNOWN)
-        self.assertEqual(snap["available_memory"], UNKNOWN)
-        self.assertEqual(snap["memory_pressure"], UNKNOWN)
-        self.assertEqual(snap["swap_pressure"], UNKNOWN)
-        self.assertEqual(snap["disk_io_pressure"], UNKNOWN)
         self.assertEqual(snap["active_processes"], UNKNOWN)
         for field in (
             "resource_band",
             "storage_admission",
             "disk_growth",
-            "available_memory",
             "active_processes",
         ):
             self.assertIn(field, snap["_meta"]["unknown_fields"])
+        # kernel-dependent fields: either honestly UNKNOWN (no /proc, listed)
+        # or read from a real kernel source with provenance recorded
+        kernel_fields = (
+            "cpu_usage",
+            "load_averages",
+            "available_memory",
+            "memory_pressure",
+            "swap_pressure",
+            "disk_io_pressure",
+            "disk_free",
+        )
+        for field in kernel_fields:
+            with self.subTest(field=field):
+                value = snap[field]
+                source = snap["_meta"]["field_sources"][field]
+                if value == UNKNOWN:
+                    self.assertEqual(source, UNKNOWN)
+                    self.assertIn(field, snap["_meta"]["unknown_fields"])
+                else:
+                    self.assertNotEqual(source, UNKNOWN)
         # capacity fails closed on UNKNOWN band
         self.assertEqual(snap["recommended_worker_capacity"]["additional_heavy_coding"], 0)
 
