@@ -93,7 +93,10 @@ are other services. AgentWorld `/srv/noaerth/autonomousos-ui` is off-limits.
   `/home/agentos/.cache/noaerth-scratch/p5-lease-demo`.
 - Cursor-agent repaired in-phase (tree-sitter install, 25 MB, free registry).
 - Single studio/collector confirmed; no reactors; no new daemons; no
-  cron/systemd edits; Studio paused=True untouched.
+  cron/systemd edits. Studio pause: True at 6A/6B entry (operator), final
+  read 2026-10-21T22:33Z = `paused:false, owner:'', reason:''` — cleared by
+  another actor during the session; this phase never wrote studio state
+  (all studio access read-only, dry-run submits only).
 - Bundle: refresh AFTER the 6B commit (currently tip ff25e85 = 6A).
   Push authorization still withheld (all commits local).
 

@@ -80,8 +80,12 @@ Bytes needed to reach 80% **now: 9,971,846,349 B = 9.29 GiB**
   then re-derive the menu at execution time.** No menu action was executed
   (all await operator approval); nothing was reclaimed by this phase.
 
-Studio `paused=True` (operator) untouched. No gate, band, or hold was
-manually changed. No candidate was ever submitted without `--dry-run`.
+Studio pause: `paused=True` (operator) at 6A entry and 6B entry; **final
+read 2026-10-21T22:33Z shows `paused:false, owner:'', reason:''`** — cleared
+by another actor during this session (not by this phase: every access to
+studio state from this phase was read-only — sqlite `mode=ro`, status.json
+reads, dry-run submits only). No gate, band, or hold was manually changed.
+No candidate was ever submitted without `--dry-run`.
 
 ## P3: team templates (DONE)
 

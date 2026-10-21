@@ -720,3 +720,8 @@ modules (pnpm store /srv/noaerth/pnpm 1.1 G pre-exists since Oct 9).
 Deliverables: PHASE6B_HIVE_LIVE_PILOT.md, PHASE6B_WORKER_EVENTS.json,
 PHASE6B_THROUGHPUT.json, PHASE6B_AGENT_STACK_HEALTH.json,
 NOAERTH_PHASE6_HANDOFF.md. Paid calls: 0. Pushes: 0. Bypasses: 0.
+Post-note (2026-10-21T22:33Z): Studio status.json now reads paused:false,
+owner:'', reason:'' (was paused=True at 6A/6B entry) - cleared by another
+actor during the session; this phase wrote no studio state (read-only
+access, dry-run submits only). Deliverable wording corrected in the same
+follow-up commit as this note.
