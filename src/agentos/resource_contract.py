@@ -62,6 +62,16 @@ MAX_ADDITIONAL_HEAVY_CODING = 2
 # Snapshot freshness for consumers (admission treats older as UNKNOWN).
 SNAPSHOT_MAX_AGE_S = 180
 
+# Bounded disk-growth history (Phase 5A): raw samples for the short rate,
+# hourly aggregates for the long rate. Total file stays ~15KB.
+GROWTH_RAW_CAP = 180           # ~6h at the 2-min publish cadence
+GROWTH_HOURLY_CAP = 168        # 7 days of hourly buckets
+GROWTH_MIN_SAMPLES = 3         # below this a rate is UNKNOWN, never 0
+GROWTH_MIN_SPAN_S = 600.0
+GROWTH_SHORT_WINDOW_S = 7200.0
+GROWTH_LONG_MIN_SPAN_S = 43200.0
+GROWTH_WARN_FLOOR_BYTES = 20 * 1024**3   # janitor warn threshold (20 GiB)
+
 # Infrastructure signals (Phase 4 stacking/stuck-scan detection).
 STACKING_JANITOR_LIMIT = 2
 STACKING_WATCH_LIMIT = 1
@@ -328,6 +338,7 @@ def collect_sources(paths: ResourcePaths, runner: Runner = default_runner) -> di
         "studio": _load_studio(paths.studio_db),
         "janitor": _load_janitor(paths, runner),
         "proc": _load_proc(),
+        "growth_history": load_growth_history(_growth_path(paths.snapshot_out)),
     }
 
 
@@ -474,14 +485,22 @@ def compose_snapshot(
             disk_free = None
     disk_free = pick("disk_free", disk_free, disk_source)
 
-    # disk_growth (bytes/day free-space change; janitor forecast only)
+    # disk_growth (bytes/day free-space change): measured short rate first,
+    # janitor forecast only as fallback; UNKNOWN until real samples exist.
     forecast = jan.get("forecast") or {}
-    growth = None
-    growth_source = "janitoros.space_status"
-    if forecast.get("trend") not in (None, "insufficient data") and isinstance(
+    measured = measure_growth(
+        sources.get("growth_history") or {},
+        now=now,
+        current_free=disk_free if isinstance(disk_free, int) else None,
+        warn_floor_bytes=(jan.get("disk") or {}).get("warn_floor_bytes"),
+    )
+    growth = measured["short_bytes_per_day"]
+    growth_source = "agentos.growth_history"
+    if growth is None and forecast.get("trend") not in (None, "insufficient data") and isinstance(
         forecast.get("avail_change_bytes_per_day"), int
     ):
         growth = forecast["avail_change_bytes_per_day"]
+        growth_source = "janitoros.space_status"
     disk_growth = pick("disk_growth", growth, growth_source)
 
     # disk_io_pressure (PSI some avg10, %)
@@ -632,6 +651,7 @@ def compose_snapshot(
                 "storage_band": adm_default.get("band"),
                 "storage_reason": adm_default.get("reason"),
             },
+            "growth": measured,
         },
     }
     return snap
@@ -645,6 +665,137 @@ def _iso(epoch: float) -> str:
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z")
     )
+
+
+# ---------------------------------------------------------------------------
+# bounded disk-growth history (Phase 5A): real samples only, never invented
+# ---------------------------------------------------------------------------
+
+def _growth_path(snapshot_out: str | Path) -> Path:
+    out = Path(snapshot_out)
+    return out.parent / "resource-growth.json"
+
+
+def load_growth_history(path: str | Path) -> dict[str, Any]:
+    """Read the bounded growth store; {} when absent or corrupt.
+
+    Shape: {"raw": [[epoch, free_bytes], ...], "hourly": [[epoch, free_bytes], ...]}
+    with newest entries last. Both lists are pruned to their caps on write.
+    """
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for key in ("raw", "hourly"):
+        rows = data.get(key)
+        if isinstance(rows, list):
+            clean = []
+            for row in rows[-max(GROWTH_RAW_CAP, GROWTH_HOURLY_CAP):]:
+                if (isinstance(row, (list, tuple)) and len(row) == 2
+                        and isinstance(row[0], (int, float))
+                        and isinstance(row[1], (int, float))):
+                    clean.append([float(row[0]), int(row[1])])
+            clean.sort(key=lambda r: r[0])
+            out[key] = clean
+    return out
+
+
+def record_growth_sample(
+    snapshot_out: str | Path, now: float, free_bytes: int
+) -> dict[str, Any]:
+    """Append one (epoch, free_bytes) sample; roll raw into hourly buckets.
+
+    Bounded: raw pruned to GROWTH_RAW_CAP, hourly to GROWTH_HOURLY_CAP.
+    Atomic publish (tmp + replace, 0644). Returns the new history. Recording
+    happens only on an actual publish with a real integer free_bytes — an
+    UNKNOWN disk_free records nothing.
+    """
+    if not isinstance(free_bytes, int) or free_bytes < 0:
+        return load_growth_history(_growth_path(snapshot_out))
+    history = load_growth_history(_growth_path(snapshot_out))
+    raw = history.get("raw", [])
+    raw.append([float(now), int(free_bytes)])
+    raw = [row for row in raw if row[0] <= now + 1][-GROWTH_RAW_CAP:]
+    hourly = history.get("hourly", [])
+    if hourly and now - hourly[-1][0] < 3600.0:
+        # refresh the open hour bucket with the newest sample (monotone window)
+        hourly[-1] = [hourly[-1][0], int(free_bytes)]
+    else:
+        hourly.append([float(now), int(free_bytes)])
+    hourly = [row for row in hourly if row[0] <= now + 1][-GROWTH_HOURLY_CAP:]
+    history = {"raw": raw, "hourly": hourly}
+    target = _growth_path(snapshot_out)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    body = json.dumps(history, separators=(",", ":")) + "\n"
+    if len(body) > 64 * 1024:
+        raise ValueError("growth history exceeds 64KB bound")
+    tmp = target.with_suffix(target.suffix + ".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, target)
+    return history
+
+
+def measure_growth(
+    history: dict[str, Any],
+    *,
+    now: float | None = None,
+    current_free: int | None = None,
+    warn_floor_bytes: int | None = None,
+) -> dict[str, Any]:
+    """Pure: short/long free-space rates (bytes/day, negative = shrinking).
+
+    A rate is None (UNKNOWN) until GROWTH_MIN_SAMPLES span
+    GROWTH_MIN_SPAN_S / GROWTH_LONG_MIN_SPAN_S of real samples — UNKNOWN is
+    never reported as 0 growth. eta_to_warn_floor_s is computed only from a
+    supported short rate that is actually negative (free space shrinking)
+    plus a real current_free and warn floor; otherwise it is None.
+    """
+    now = time.time() if now is None else now
+    raw = [r for r in (history or {}).get("raw", []) if r[0] <= now + 1]
+    hourly = [r for r in (history or {}).get("hourly", []) if r[0] <= now + 1]
+    floor = warn_floor_bytes if isinstance(warn_floor_bytes, int) else None
+
+    def rate(rows: list[list[float]], min_span: float) -> tuple[float | None, float]:
+        if len(rows) < GROWTH_MIN_SAMPLES:
+            return None, 0.0
+        window = [r for r in rows if now - r[0] <= max(min_span, GROWTH_SHORT_WINDOW_S)]
+        if len(window) < GROWTH_MIN_SAMPLES:
+            return None, 0.0
+        span = window[-1][0] - window[0][0]
+        if span < GROWTH_MIN_SPAN_S:
+            return None, 0.0
+        return (window[-1][1] - window[0][1]) / span * 86400.0, span
+
+    short_rate, short_span = rate(raw, GROWTH_SHORT_WINDOW_S)
+    long_rate, long_span = rate(hourly, GROWTH_LONG_MIN_SPAN_S)
+
+    eta = None
+    if (
+        short_rate is not None
+        and short_rate < 0
+        and isinstance(current_free, int)
+        and floor is not None
+    ):
+        if current_free <= floor:
+            eta = 0.0
+        else:
+            eta = (current_free - floor) / (-short_rate / 86400.0)
+
+    return {
+        "short_bytes_per_day": short_rate,
+        "long_bytes_per_day": long_rate,
+        "short_window_s": short_span,
+        "long_window_s": long_span,
+        "raw_samples": len(raw),
+        "hourly_samples": len(hourly),
+        "eta_to_warn_floor_s": eta,
+        "warn_floor_bytes": floor,
+        "basis": "measured" if short_rate is not None else UNKNOWN,
+    }
 
 
 def build_snapshot(
@@ -677,7 +828,11 @@ def _host_band(paths: ResourcePaths) -> str:
 
 
 def write_snapshot(snapshot: dict[str, Any], path: str | Path | None = None) -> Path:
-    """Atomic bounded publish: tmp file + os.replace. ~16KB document."""
+    """Atomic bounded publish: tmp file + os.replace. ~16KB document.
+
+    Also records one bounded (epoch, free_bytes) sample into the growth
+    history (only when disk_free is a real integer — UNKNOWN records nothing).
+    """
     paths = ResourcePaths.from_env()
     out = Path(path or paths.snapshot_out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -689,6 +844,13 @@ def write_snapshot(snapshot: dict[str, Any], path: str | Path | None = None) -> 
     # world-readable: cross-user consumers (control collector, hive) read it
     os.chmod(tmp, 0o644)
     os.replace(tmp, out)
+    free = snapshot.get("disk_free")
+    meta = snapshot.get("_meta") or {}
+    if isinstance(free, int) and free >= 0:
+        try:
+            record_growth_sample(out, float(meta.get("generated_epoch") or time.time()), free)
+        except (OSError, ValueError):
+            pass  # growth history is best-effort; the snapshot itself stands
     return out
 
 

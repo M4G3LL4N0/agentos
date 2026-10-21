@@ -4,18 +4,25 @@ import json
 import tempfile
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from agentos.resource_contract import (
     CONTRACT_FIELDS,
+    GROWTH_HOURLY_CAP,
+    GROWTH_MIN_SAMPLES,
+    GROWTH_RAW_CAP,
     MAX_ADDITIONAL_HEAVY_CODING,
     UNKNOWN,
     ResourcePaths,
     build_snapshot,
     collect_sources,
     compose_snapshot,
+    load_growth_history,
+    measure_growth,
     read_snapshot,
     recommend_capacity,
+    record_growth_sample,
     write_snapshot,
 )
 
@@ -373,6 +380,144 @@ class TestContractDocument(unittest.TestCase):
             "at most 2 additional heavyweight coding workers "
             "(MAX_ADDITIONAL_HEAVY_CODING=2)",
         )
+
+
+class TestGrowthHistory(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.out = Path(self.tmp.name) / "resource-snapshot.json"
+
+    def test_record_and_measure_short_rate(self) -> None:
+        import agentos.resource_contract as rc
+
+        t0 = NOW - 3600.0
+        # 100 GiB free, shrinking by ~1 GiB every 10 min
+        for i in range(6):
+            free = int((100 - i) * 1024**3)
+            rc.record_growth_sample(self.out, t0 + i * 600.0, free)
+        loaded = load_growth_history(rc._growth_path(self.out))
+        self.assertEqual(len(loaded["raw"]), 6)
+        measured = measure_growth(
+            loaded, now=t0 + 3000.0, current_free=loaded["raw"][-1][1],
+            warn_floor_bytes=20 * 1024**3,
+        )
+        self.assertIsNotNone(measured["short_bytes_per_day"])
+        # shrinking => negative rate, roughly -24 GiB/day
+        self.assertLess(measured["short_bytes_per_day"], 0)
+        self.assertAlmostEqual(
+            measured["short_bytes_per_day"], -(144 * 1024**3), delta=1024**3
+        )
+        self.assertIsNotNone(measured["eta_to_warn_floor_s"])
+        self.assertGreater(measured["eta_to_warn_floor_s"], 0)
+
+    def test_insufficient_samples_is_unknown_not_zero(self) -> None:
+        measured = measure_growth({}, now=NOW)
+        self.assertIsNone(measured["short_bytes_per_day"])
+        self.assertIsNone(measured["long_bytes_per_day"])
+        self.assertIsNone(measured["eta_to_warn_floor_s"])
+        self.assertEqual(measured["basis"], UNKNOWN)
+        # contract field with no history and no forecast is UNKNOWN, not 0
+        snap = compose_snapshot(full_sources(janitor={
+            "health": "ok",
+            "disk": {"avail_bytes": 20 * 1024**3, "band": "ok"},
+            "forecast": {"trend": "insufficient data"},
+            "admission_default": {"admit": True, "band": "ok", "reason": "healthy"},
+        }), now=NOW, band="HEALTHY")
+        self.assertEqual(snap["disk_growth"], UNKNOWN)
+        self.assertIn("disk_growth", snap["_meta"]["unknown_fields"])
+
+    def test_zero_growth_is_distinct_from_unknown(self) -> None:
+        import agentos.resource_contract as rc
+
+        t0 = NOW - 3600.0
+        for i in range(4):
+            rc.record_growth_sample(self.out, t0 + i * 600.0, 50 * 1024**3)
+        loaded = load_growth_history(rc._growth_path(self.out))
+        measured = measure_growth(loaded, now=t0 + 1800.0, current_free=50 * 1024**3,
+                                  warn_floor_bytes=20 * 1024**3)
+        self.assertEqual(measured["short_bytes_per_day"], 0.0)
+        self.assertIsNone(measured["eta_to_warn_floor_s"])  # not shrinking
+        snap = compose_snapshot(
+            full_sources(growth_history=loaded), now=NOW, band="HEALTHY"
+        )
+        self.assertEqual(snap["disk_growth"], 0.0)
+        self.assertNotIn("disk_growth", snap["_meta"]["unknown_fields"])
+
+    def test_measured_rate_precedes_janitor_forecast(self) -> None:
+        import agentos.resource_contract as rc
+
+        t0 = NOW - 3600.0
+        for i in range(4):
+            rc.record_growth_sample(self.out, t0 + i * 600.0, (50 - i) * 1024**3)
+        loaded = load_growth_history(rc._growth_path(self.out))
+        sources = full_sources(growth_history=loaded)
+        snap = compose_snapshot(sources, now=NOW, band="HEALTHY")
+        self.assertEqual(snap["_meta"]["field_sources"]["disk_growth"],
+                         "agentos.growth_history")
+        self.assertNotEqual(snap["disk_growth"], -(1024**3))  # not the forecast
+
+    def test_raw_and_hourly_caps_hold(self) -> None:
+        import agentos.resource_contract as rc
+
+        t0 = NOW - 20 * 24 * 3600.0  # 20 days of history
+        for i in range(GROWTH_RAW_CAP + 50):
+            rc.record_growth_sample(self.out, t0 + i * 120.0, 50 * 1024**3 - i)
+        loaded = load_growth_history(rc._growth_path(self.out))
+        self.assertLessEqual(len(loaded["raw"]), GROWTH_RAW_CAP)
+        self.assertLessEqual(len(loaded["hourly"]), GROWTH_HOURLY_CAP)
+
+    def test_unknown_disk_free_records_nothing(self) -> None:
+        import agentos.resource_contract as rc
+
+        sources = full_sources(
+            janitor=None,
+            aos={
+                "mode": "UNKNOWN",
+                "allow_new_work": None,
+                "host": {"cpu": {}, "memory": {}, "disk": {}},
+                "pressure": {},
+                "cpu_budget": {},
+            },
+        )
+        with unittest.mock.patch.object(
+            rc.shutil, "disk_usage", side_effect=OSError
+        ):
+            snap = compose_snapshot(sources, now=NOW, band=UNKNOWN)
+        self.assertEqual(snap["disk_free"], UNKNOWN)
+        write_snapshot(snap, self.out)
+        history = load_growth_history(rc._growth_path(self.out))
+        self.assertEqual(history, {})
+
+    def test_publish_records_sample(self) -> None:
+        import agentos.resource_contract as rc
+
+        snap = compose_snapshot(full_sources(), now=NOW, band="HEALTHY")
+        write_snapshot(snap, self.out)
+        history = load_growth_history(rc._growth_path(self.out))
+        self.assertEqual(len(history["raw"]), 1)
+        self.assertEqual(history["raw"][0][1], 20 * 1024**3)
+
+    def test_eta_zero_when_already_below_floor(self) -> None:
+        import agentos.resource_contract as rc
+
+        t0 = NOW - 3600.0
+        for i in range(4):
+            rc.record_growth_sample(self.out, t0 + i * 600.0, (19 - i) * 1024**3)
+        loaded = load_growth_history(rc._growth_path(self.out))
+        measured = measure_growth(loaded, now=t0 + 1800.0, current_free=18 * 1024**3,
+                                  warn_floor_bytes=20 * 1024**3)
+        self.assertEqual(measured["eta_to_warn_floor_s"], 0.0)
+
+    def test_corrupt_history_tolerated(self) -> None:
+        import agentos.resource_contract as rc
+
+        path = rc._growth_path(self.out)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{not json", encoding="utf-8")
+        self.assertEqual(load_growth_history(path), {})
+        rc.record_growth_sample(self.out, NOW, 1024**3)
+        self.assertEqual(len(load_growth_history(path)["raw"]), 1)
 
 
 if __name__ == "__main__":
