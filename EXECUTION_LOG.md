@@ -671,3 +671,52 @@ P5: focused 89 OK local; full 958 agentos + 86 autonomousos OK server.
 6B NOT eligible. Deliverables: PHASE6A_STORAGE_RECOVERY.md,
 PHASE6A_ADMISSION_STATE.json, PHASE6A_SOURCE_SAFETY.md. Paid calls: 0.
 Pushes: 0. Unauthorized deletions: 0.
+
+## 2026-10-21 — Phase 6B: autonomous company pilot (outcome: P1/P2 BLOCKED at admission; P0/P3-P9 done, no bypass)
+
+P0: submission interface mapped (mesh.hive.cli submit is the only write
+command; gates validate_manifest -> serveros_snapshot_gate ->
+resource_admission -> cpu_heavy -> janitor_admission); candidates
+/root/phase5b/{candidate,probe}-manifest.json preserved; registry 67 tasks /
+0 matches (never submitted). Three dry-run captures (final exact
+2026-10-21T22:25:17Z): accepted=false, serveros_low_priority_deferred,
+band PRESSED, retry 60 s, state_age 76.2 s. Disk at that instant 89.69%
+(92,282,322,944/102,888,095,744); touched 90.005% at 21:24Z (CRITICAL
+boundary); janitoros health/band CRITICAL, forecast -2.03 GB/day filling.
+Bytes to <80% now 9.29 GiB - 6A menu A+B+C+D (6.13) no longer closes it;
+full A-F ~9.15 still short while growth continues. Menu untouched.
+P3: TEAM_TEMPLATES + template()/assemble() in workforce.py, local+server
+(TeamTemplateTest x6; suites 67 local / 92 server; server backup
+.bak-6b-20261021); live snapshot shows realm assembled from templates.
+P4: matrix in PHASE6B_AGENT_STACK_HEALTH.json - opencode v2.0.24 OK for
+portfolio but EACCES for agentos (/home/portfolio 750, shim exec denied;
+capability MISCONFIGURED); codex 0.161.0, claude 2.1.285, hermes 0.22.2
+OK for portfolio; openclaw/langgraph/langfuse/opentelemetry/mcp absent;
+capability catalog 14 entries (3 OK, 2 AUTH_REQUIRED, 1 UNKNOWN, 7
+UNAVAILABLE, 1 MISCONFIGURED). cursor-agent REPAIRED: whole node_modules
+missing (tree-sitter crash) -> pnpm 12.4.2 install tree-sitter@0.25.1 +
+tree-sitter-bash@0.25.1 with allowBuilds (25 MB, free registry);
+cursor-agent --version rc=0; auth state UNKNOWN (trust prompt).
+P5: lease round-trip on production registry /var/lib/agentos/
+scratch-leases.json - acquire ACTIVE, crash re-register replaced (1 record,
+monotonic), complete RETIRED, reap KEPT (grace) - record P5-LEASE-DEMO-01
+(20:58:10Z); refusal path (nonexistent path -> REFUSED, janitor rc=1);
+worker-level resume NOT run (needs admitted worker) = PARTIAL.
+P6: versioned interface proven - noaerth.hive.snapshot/1 +
+noaerth.hive.observation/1 + NOAERTH-Hive/1 header; ephemeral serves 8799
+and 8792 (snapshot 160,727 B, events 288,536 B), both released/verified;
+8787 portfolio_os unauthorized, 8791 audioos 403; event_cursor 1081 live.
+Observed (other actors, read-only): 8 realm-studio workers TESTING on
+R21-12, R23-12 chain TASK_START->...->TASK_VERIFIED merged 09e55b85, R21-12
+BOUNDED_RETRY #2. P7: baselines captured; 1-vs-2 comparison UNKNOWN (not
+run, no synthetic numbers). P8: 5/5 rollback targets exist as commits;
+REL-realm-e5b5dd7f rollback NULL -> promotion blocked; 0 approvals.
+P9: suites green - local 958 (login PATH; one test is shutil.which/PATH
+sensitive) + 67; server 1028 + 92. Server drift: 4 new test files +
+src/agentos edits 20:00-22:47 +0200 from a concurrent session (untouched,
+not synced). No daemons left (8799/8792 free), single studio/collector,
+no cron/systemd edits, Studio pause intact. My footprint: 25 MB node
+modules (pnpm store /srv/noaerth/pnpm 1.1 G pre-exists since Oct 9).
+Deliverables: PHASE6B_HIVE_LIVE_PILOT.md, PHASE6B_WORKER_EVENTS.json,
+PHASE6B_THROUGHPUT.json, PHASE6B_AGENT_STACK_HEALTH.json,
+NOAERTH_PHASE6_HANDOFF.md. Paid calls: 0. Pushes: 0. Bypasses: 0.

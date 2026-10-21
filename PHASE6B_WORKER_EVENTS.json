@@ -1,0 +1,164 @@
+{
+  "schema": "noaerth.phase6b.worker-events/1",
+  "generated_utc": "2026-10-21T22:30:00Z",
+  "server": "vmi3635094",
+  "phase6b_verdict": "P1_P2_BLOCKED_ADMISSION; no PASS for unrun pilot",
+  "provenance_legend": {
+    "MINE": "action executed by this phase",
+    "OBSERVED": "read via the versioned read-only Hive/studio interfaces by this phase",
+    "OTHER_ACTOR": "produced by existing Studio/venture workers, not this phase"
+  },
+  "gate_events": [
+    {
+      "kind": "SUBMISSION_DRY_RUN",
+      "provenance": "MINE",
+      "command": "python3 -m mesh.hive.cli submit --manifest /root/phase5b/candidate-manifest.json --expected-bytes 536870912 --dry-run",
+      "attempt": 1,
+      "captured_utc": "2026-10-21T22:15:00Z",
+      "captured_utc_precision": "minute-approximate",
+      "result": {
+        "accepted": false,
+        "reason": "serveros_low_priority_deferred",
+        "resource_band": "PRESSED",
+        "deferred_tasks": ["SERVEROS-5B-PILOT"],
+        "retry_after_s": 60,
+        "state_age_s": 117.7,
+        "dry_run": true
+      }
+    },
+    {
+      "kind": "SUBMISSION_DRY_RUN",
+      "provenance": "MINE",
+      "command": "python3 -m mesh.hive.cli submit --manifest /root/phase5b/candidate-manifest.json --expected-bytes 536870912 --dry-run",
+      "attempt": 2,
+      "captured_utc": "2026-10-21T22:20:00Z",
+      "captured_utc_precision": "minute-approximate",
+      "result": {
+        "accepted": false,
+        "reason": "serveros_low_priority_deferred",
+        "resource_band": "PRESSED",
+        "deferred_tasks": ["SERVEROS-5B-PILOT"],
+        "retry_after_s": 60,
+        "state_age_s": 98.8,
+        "dry_run": true
+      }
+    },
+    {
+      "kind": "SUBMISSION_DRY_RUN",
+      "provenance": "MINE",
+      "command": "python3 -m mesh.hive.cli submit --manifest /root/phase5b/candidate-manifest.json --expected-bytes 536870912 --dry-run",
+      "attempt": 3,
+      "captured_utc": "2026-10-21T22:25:17Z",
+      "captured_utc_precision": "exact (date -u bracket)",
+      "result": {
+        "accepted": false,
+        "reason": "serveros_low_priority_deferred",
+        "resource_band": "PRESSED",
+        "deferred_tasks": ["SERVEROS-5B-PILOT"],
+        "retry_after_s": 60,
+        "state_age_s": 76.2,
+        "dry_run": true
+      },
+      "disk_used_bytes_at_capture": 92282322944,
+      "disk_total_bytes": 102888095744,
+      "disk_used_pct_exact": 89.69
+    },
+    {
+      "kind": "REGISTRY_CHECK",
+      "provenance": "MINE",
+      "detail": "studio.sqlite tasks: 67 rows, 0 matches for SERVEROS-5B-PILOT / 5B / PILOT / PROBE ids - candidate never submitted for real"
+    }
+  ],
+  "lease_lifecycle_events": [
+    {
+      "kind": "LEASE_ACQUIRE",
+      "provenance": "MINE",
+      "task_id": "P5-LEASE-DEMO-01",
+      "registry": "/var/lib/agentos/scratch-leases.json",
+      "scratch_root": "/home/agentos/.cache/noaerth-scratch/p5-lease-demo",
+      "created_utc": "2026-10-21T20:58:10.545154Z",
+      "created_epoch": 1792616290.5451825,
+      "janitor_register": {"rc": 0, "ok": true},
+      "result_state": "ACTIVE"
+    },
+    {
+      "kind": "LEASE_CRASH_SIM_REPLACE",
+      "provenance": "MINE",
+      "task_id": "P5-LEASE-DEMO-01",
+      "detail": "re-register after simulated crash: exactly 1 record, replaced not duplicated, epoch monotonic"
+    },
+    {
+      "kind": "LEASE_COMPLETE",
+      "provenance": "MINE",
+      "task_id": "P5-LEASE-DEMO-01",
+      "completed_utc": "2026-10-21T20:58:10.633626Z",
+      "janitor_complete": {"rc": 0, "ok": true, "detail": "{\"completed\": 1}"},
+      "result_state": "RETIRED"
+    },
+    {
+      "kind": "LEASE_REAP",
+      "provenance": "MINE",
+      "task_id": "P5-LEASE-DEMO-01",
+      "janitor_reap": {"rc": 0, "ok": true},
+      "outcome": "KEPT",
+      "reason": "within grace period after completion",
+      "policy": "disposable",
+      "note": "path left on policy; no deletion performed by this phase"
+    },
+    {
+      "kind": "LEASE_REFUSAL_PROBE",
+      "provenance": "MINE",
+      "detail": "non-existent scratch path -> register refused, lease_state REFUSED, janitor rc=1 (refusal path verified, stderr not captured by wrapper)"
+    },
+    {
+      "kind": "WORKER_LEVEL_RESUME",
+      "provenance": "MINE",
+      "status": "NOT_RUN",
+      "reason": "requires an admitted worker (P1) - blocked by admission; recorded PARTIAL"
+    }
+  ],
+  "observed_production_events": {
+    "note": "REAL events from the existing production path (realm-studio scheduler), observed read-only via noaerth.hive.observation/1 during this phase. OTHER_ACTOR work - not Phase 6B candidate output.",
+    "source": "/api/snapshot events_tail + /api/events (ephemeral serve 8792, 2026-10-21T22:22:52Z)",
+    "event_cursor": 1081,
+    "newest_event_utc": "2026-10-21T22:06:44",
+    "chain_r23_12": [
+      {"sequence": 1071, "kind": "TASK_START", "task_id": "R23-12", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T21:11:42+00:00"},
+      {"sequence": 1072, "kind": "WORKER_START", "task_id": "R23-12", "provider": "claude", "model": "sonnet", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T21:12:07+00:00"},
+      {"sequence": 1073, "kind": "WORKER_EXIT", "task_id": "R23-12", "status": "EXIT_OK", "resource_usage": {"files_changed": 8}, "activity_note": "exit code alone is not proof of work", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T21:15:23+00:00"},
+      {"sequence": 1074, "kind": "ROUTE_RESULT", "task_id": "R23-12", "status": "EXIT_OK", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T21:15:23+00:00"},
+      {"sequence": 1075, "kind": "STAMP_PREFLIGHT", "task_id": "R23-12", "status": "RESTAMPED", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T21:15:24+00:00"},
+      {"sequence": 1077, "kind": "VERIFY_RESULT", "task_id": "R23-12", "status": "PASS", "provenance_field": "VERIFIED", "timestamp_utc": "2026-10-21T22:06:26+00:00"},
+      {"sequence": 1079, "kind": "TASK_VERIFIED", "task_id": "R23-12", "status": "COMPLETE", "activity": "R23-12 merged as 09e55b85 after independent verification", "evidence_reference": ["/srv/noaerth/realm-studio/logs/R23-12-1792617102.log"], "provenance_field": "VERIFIED", "timestamp_utc": "2026-10-21T22:06:27+00:00"},
+      {"sequence": 1078, "kind": "TASK_COMPLETE", "task_id": "R23-12", "provenance_field": "INFERRED", "timestamp_utc": "2026-10-21T22:06:27Z"}
+    ],
+    "chain_r21_12": [
+      {"sequence": 1076, "kind": "BOUNDED_RETRY", "task_id": "R21-12", "attempt_id": "R21-12#2", "provenance_field": "INFERRED", "timestamp_utc": "2026-10-21T21:40:42Z"},
+      {"sequence": 1080, "kind": "TASK_START", "task_id": "R21-12", "activity": "Started R21-12: Prioritize the Next Frontier Gameplay Improvements from Real Play", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T22:06:43+00:00"},
+      {"sequence": 1081, "kind": "STAMP_PREFLIGHT", "task_id": "R21-12", "status": "RESTAMPED", "provenance_field": "OBSERVED", "timestamp_utc": "2026-10-21T22:06:44+00:00"}
+    ],
+    "live_workers_at_capture": {
+      "captured_utc": "2026-10-21T22:22:52Z",
+      "count": 8,
+      "all_scheduler": "realm-studio",
+      "all_task": "R21-12",
+      "routes": ["tool", "gate"],
+      "state": "TESTING",
+      "heartbeat_utc": "2026-10-21T22:22:42Z",
+      "pids": [1535007, 1535008, 1535311, 1535328, 1609813, 1645444, 1712706, 1719365]
+    },
+    "task_states_at_capture": {"VERIFIED_COMPLETE": 12, "QUEUED": 9, "TESTING": 1, "total": 22}
+  },
+  "interface_observations": [
+    {"kind": "HIVE_SERVE", "provenance": "MINE", "port": 8799, "header": "NOAERTH-Hive/1", "contract": "noaerth.hive.observation/1", "result": "served real snapshot/events; released cleanly", "left_running": false},
+    {"kind": "HIVE_SERVE", "provenance": "MINE", "port": 8792, "captured_utc": "2026-10-21T22:22:52Z", "snapshot_bytes": 160727, "events_bytes": 288536, "log": "hive view on http://127.0.0.1:8792 (read-only)", "released_after_timeout": true, "left_running": false},
+    {"kind": "PORT_PROBE", "provenance": "MINE", "port": 8787, "service": "portfolio_os serve", "response": "{\"error\":\"unauthorized\"}"},
+    {"kind": "PORT_PROBE", "provenance": "MINE", "port": 8791, "service": "AudioOS", "response": "403 Private AudioOS Studio. Use noaerth live audio."},
+    {"kind": "WORKER_LOOKUP", "provenance": "MINE", "endpoint": "/api/worker/R21-12", "response": "{\"error\":\"unknown worker\"}", "note": "proc-style worker ids are what execution_workers carries (proc:<pid>); task-id lookup not populated - recorded as observed"}
+  ],
+  "honest_unknowns": [
+    "provider/model/token_usage/cost_usd on studio events: UNKNOWN (preserved, not invented)",
+    "worker-level interruption/resume of a real worker: not run (blocked)",
+    "provider_cooldown at 6A read: UNKNOWN; fresh cooldowns list shows claude-cli/hermes entries expired 2026-10-15"
+  ]
+}

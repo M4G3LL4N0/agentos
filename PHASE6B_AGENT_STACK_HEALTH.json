@@ -1,0 +1,88 @@
+{
+  "schema": "noaerth.phase6b.agent-stack-health/1",
+  "generated_utc": "2026-10-21T22:30:00Z",
+  "server": "vmi3635094",
+  "probe_context": "versions/auth probed as user portfolio with login PATH (~/.local/bin, /opt/homebrew/bin, /usr/local/bin); capability catalog probed as user agentos via `python3 -m agentos.cli capabilities` (PYTHONPATH=/srv/noaerth/agentos/src, AGENTOS_HOME=/var/lib/agentos)",
+  "components": [
+    {
+      "name": "opencode",
+      "version": "v2.0.24",
+      "paths": {
+        "binary": "/home/portfolio/.opencode/bin/opencode (203671008 B, -rwxr-xr-x)",
+        "shim": "/usr/local/bin/opencode (69 B, root-owned, execs the binary above)"
+      },
+      "runs_as_portfolio": true,
+      "runs_as_agentos": false,
+      "defect": "agentos execution fails: Permission denied (EACCES) because /home/portfolio is drwxr-x--- portfolio:portfolio (750) and agentos is not in group portfolio; shim cannot traverse/exec",
+      "agentos_capability": {"readiness": "CONFIGURATION_REQUIRED", "health": "MISCONFIGURED", "exec_ok_fail": "0/0"},
+      "required_fix": "make the binary reachable by the worker user: world-executable shared install path (e.g. real binary at /usr/local/bin) or add agentos to an appropriate group; REPORT-ONLY - no permission changes made by this phase",
+      "resource_impact": "blocks the P1 candidate's designated agent (manifest agent=opencode) for the agentos runtime even after disk admission clears",
+      "status": "BROKEN_FOR_AGENTOS / OK_FOR_PORTFOLIO"
+    },
+    {
+      "name": "codex (codex-cli)",
+      "version": "0.161.0",
+      "path": "/home/portfolio/.local/bin/codex",
+      "auth": "~/.codex/auth.json present",
+      "status": "OK_FOR_PORTFOLIO"
+    },
+    {
+      "name": "claude",
+      "version": "2.1.285",
+      "path": "/home/portfolio/.local/bin/claude",
+      "auth": "~/.claude present",
+      "observed_cooldown": {"provider": "hermes", "failure_class": "claude_auth", "until_utc": "2026-10-15T22:59:55Z", "state": "expired as of capture"},
+      "status": "OK_FOR_PORTFOLIO"
+    },
+    {
+      "name": "cursor-agent",
+      "version": "2026.10.14-0f9edde",
+      "path": "/home/portfolio/.local/share/cursor-agent/versions/2026.10.14-0f9edde/ (symlink /home/portfolio/.local/bin/cursor-agent)",
+      "defect_found": "startup crash 'Cannot find module tree-sitter': entire node_modules tree absent (bundle requires tree-sitter + tree-sitter-bash; webpack chunks reference ../../node_modules/.pnpm layout). SEA binary fails the same way. No system node/npm (only the bundled node v24.5.0).",
+      "repair_performed": "installed tree-sitter@0.25.1 + tree-sitter-bash@0.25.1 with pnpm 12.4.2 (from pre-existing store links, free public registry) into /home/portfolio/.local/share/node_modules; allowBuilds approved in pnpm-workspace.yaml; node-gyp-build completed (2.4 s)",
+      "repair_artifacts": [
+        "/home/portfolio/.local/share/node_modules (25 MB)",
+        "/home/portfolio/.local/share/package.json (name local-runtime-deps, private)",
+        "/home/portfolio/.local/share/pnpm-workspace.yaml (allowBuilds: tree-sitter true, tree-sitter-bash true)"
+      ],
+      "verification": "cursor-agent --version -> 2026.10.14-0f9edde rc=0 (was crash before)",
+      "auth_state": "UNKNOWN - `auth status` presents an interactive 'Workspace Trust Required' prompt; not answered by this phase",
+      "status": "REPAIRED_IN_PHASE_6B"
+    },
+    {
+      "name": "hermes",
+      "version": "Hermes Agent v0.22.2 (2026.9.24)",
+      "path": "/home/portfolio/.local/bin/hermes (75 B wrapper) -> /srv/noaerth/agent-stack/hermes/src/.hermes/bin/hermes",
+      "runs_as_portfolio": true,
+      "agentos_capability": {"readiness": "UNAVAILABLE", "health": "UNAVAILABLE", "note": "binary runs for portfolio; adapter-side probe marks unavailable for agentos (not investigated beyond this)"},
+      "status": "OK_FOR_PORTFOLIO / UNAVAILABLE_FOR_AGENTOS"
+    },
+    {"name": "openclaw", "status": "ABSENT", "agentos_capability": "UNAVAILABLE", "evidence": "binary not on PATH, no install found"},
+    {"name": "langgraph", "status": "ABSENT", "agentos_capability": "UNAVAILABLE", "evidence": "binary not on PATH; python module not importable"},
+    {"name": "python langfuse", "status": "ABSENT", "evidence": "python3 import fails"},
+    {"name": "python opentelemetry", "status": "ABSENT", "evidence": "python3 import fails"},
+    {"name": "python mcp", "status": "ABSENT", "evidence": "python3 import fails"},
+    {"name": "chatbridge", "status": "PRESENT", "path": "/srv/noaerth/chatbridge-client"},
+    {"name": "node runtimes", "status": "NO_SYSTEM_NODE", "detail": "no /usr/bin/node|/usr/local/bin/node; cursor bundles node v24.5.0; portfolio mise has node 24.21.0 at /home/portfolio/.local/share/mise/installs/node/24.21.0; pnpm 10.0.0/10.12.1/10.33.2/12.4.2 in package-manager-store"}
+  ],
+  "agentos_capability_catalog": {
+    "command": "python3 -m agentos.cli capabilities [inspect --readiness]",
+    "counts": {"total": 14, "available_ok": 3, "auth_required": 2, "unknown": 1, "unavailable": 7, "misconfigured": 1},
+    "entries": [
+      {"id": "echo", "readiness": "AVAILABLE", "health": "OK"},
+      {"id": "filesystem", "readiness": "AVAILABLE", "health": "OK"},
+      {"id": "shell", "readiness": "AVAILABLE", "health": "OK"},
+      {"id": "github", "readiness": "AUTH_REQUIRED", "health": "AUTH_REQUIRED"},
+      {"id": "xai", "readiness": "AUTH_REQUIRED", "health": "AUTH_REQUIRED"},
+      {"id": "browser-harness", "readiness": "UNKNOWN", "health": "UNKNOWN"},
+      {"id": "grok", "readiness": "UNAVAILABLE", "health": "UNAVAILABLE"},
+      {"id": "grokbot-office", "readiness": "UNAVAILABLE", "health": "UNAVAILABLE"},
+      {"id": "hermes", "readiness": "UNAVAILABLE", "health": "UNAVAILABLE"},
+      {"id": "langgraph", "readiness": "UNAVAILABLE", "health": "UNAVAILABLE"},
+      {"id": "openclaw", "readiness": "UNAVAILABLE", "health": "UNAVAILABLE"},
+      {"id": "openhands", "readiness": "UNAVAILABLE", "health": "UNAVAILABLE"},
+      {"id": "opencode", "readiness": "CONFIGURATION_REQUIRED", "health": "MISCONFIGURED", "exec_ok_fail": "0/0", "root_cause": "home-directory permission wall (see components[opencode])"}
+    ]
+  },
+  "budget_note": "all probes local/read-only except cursor repair package download (public npm registry, free). Paid calls: 0."
+}

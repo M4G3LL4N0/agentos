@@ -521,3 +521,29 @@ untouched). No off-host backup exists — restic runbook in
 PHASE6A_SOURCE_SAFETY.md. Bundle verified at 6afdf68. Suites: 958+86 OK.
 Next: operator executes approved menu subset -> governor self-clears ->
 re-verify classify() -> Phase 6B eligible. Tip 6afdf68, 40 unpushed.
+
+## Phase 6B end-state (2026-10-21)
+
+Pilot PARTIAL: every admission-independent part done (P0 interface/gates,
+P3 team templates local+server, P4 agent-stack matrix, P5 lease layer
+worker-level resume PARTIAL, P6 observation contract serves, P7 baselines
+only, P8 release audit, P9 suites), P1/P2 BLOCKED and never bypassed -
+three dry-run captures end at 2026-10-21T22:25:17Z (accepted=false,
+serveros_low_priority_deferred, band PRESSED, dry_run=true), registry still
+0 candidate matches. Disk worsened 85.82% -> 89.69% (+4.0 GiB/24h, brief
+90.005% touch); bytes to <80% now 9.29 GiB -> 6A package A+B+C+D (6.13)
+no longer suffices; arrest growth (paios journal flood, syslog) then
+re-derive menu - nothing reclaimed, all approvals pending. Opencode runs
+for portfolio but EACCES for agentos (home 750) - fix required before P1
+executes; cursor-agent repaired in-phase (tree-sitter install, 25 MB).
+Lease evidence P5-LEASE-DEMO-01 RETIRED/KEPT-in-grace on the production
+registry; hive serves 8799/8792 captured then released (event_cursor 1081;
+noaerth.hive.observation/1). Observed other-actor production: 8
+realm-studio workers TESTING, R23-12 merged 09e55b85 after verification.
+REL-realm-e5b5dd7f (no rollback) promotion blocked; 0 approvals.
+Suites: local 958 + 67 OK; server 1028 + 92 OK (server has 4 test files +
+src edits from a concurrent session 20:00-22:47 +0200 - untouched).
+Deliverables: PHASE6B_HIVE_LIVE_PILOT.md, PHASE6B_WORKER_EVENTS.json,
+PHASE6B_THROUGHPUT.json (1-vs-2 = UNKNOWN, not run),
+PHASE6B_AGENT_STACK_HEALTH.json, NOAERTH_PHASE6_HANDOFF.md. Bundle refresh
+required after this commit (tip ff25e85 = 6A). Paid calls: 0. Pushes: 0.

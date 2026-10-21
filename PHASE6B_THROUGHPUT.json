@@ -1,0 +1,73 @@
+{
+  "schema": "noaerth.phase6b.throughput/1",
+  "generated_utc": "2026-10-21T22:30:00Z",
+  "server": "vmi3635094",
+  "comparison": {
+    "one_worker_vs_two_workers": "UNKNOWN",
+    "reason": "admission never allowed a Phase 6B worker to start (P1 BLOCKED); no 1-worker or 2-worker pilot was run",
+    "synthetic_numbers_used": false,
+    "rule": "never report a pass/metric for an unrun live pilot"
+  },
+  "baselines_observed": [
+    {
+      "captured_utc": "2026-10-21T21:24:05Z",
+      "source": "uptime + df + free (host)",
+      "load_avg": [8.24, 10.30, 10.46],
+      "cpus": 6,
+      "mem_total_mib": 11960,
+      "mem_used_mib": 2160,
+      "mem_available_mib": 9800,
+      "disk_used_bytes": 92604899328,
+      "disk_total_bytes": 102888095744,
+      "disk_used_pct_exact": 90.005,
+      "note": "briefly at/over the governor CRITICAL boundary (>=90) during this window"
+    },
+    {
+      "captured_utc": "2026-10-21T22:22:52Z",
+      "source": "hive snapshot resources (noaerth.hive.snapshot/1, ephemeral serve 8792)",
+      "load_avg": [3.6, 5.19, 5.67],
+      "cpus": 6,
+      "mem_total_gib": 11.68,
+      "mem_available_gib": 9.95,
+      "swap_used_gib": 0.5,
+      "psi_cpu_avg60": 3.0,
+      "psi_memory_avg60": 0.0,
+      "psi_io_avg60": 1.67,
+      "disk_used_pct": 89.7,
+      "disk_free_gib": 9.9,
+      "janitoros": {"health": "CRITICAL", "band": "CRITICAL", "trend": "filling", "avail_change_bytes_per_day": -2028401962, "forecast_samples": 605, "window_hours": 159.05},
+      "friendsos_view": {"psi_cpu60": 3.1, "load_class": "normal", "idle": 49.8, "heavy": 2}
+    },
+    {
+      "captured_utc": "2026-10-21T22:25:17Z",
+      "source": "df -B1 at final gate reading",
+      "disk_used_bytes": 92282322944,
+      "disk_total_bytes": 102888095744,
+      "disk_avail_bytes": 10588995584,
+      "disk_used_pct_exact": 89.69,
+      "bytes_to_free_for_80pct": 9971846349,
+      "gib_to_free_for_80pct": 9.29
+    }
+  ],
+  "observed_concurrency_other_actors": {
+    "note": "existing Studio workers (other actors), observed read-only - NOT Phase 6B pilot output and NOT counted as pilot throughput",
+    "live_execution_workers": 8,
+    "all_scheduler": "realm-studio",
+    "task": "R21-12",
+    "state": "TESTING",
+    "heartbeat_utc": "2026-10-21T22:22:42Z",
+    "studio_tasks": {"VERIFIED_COMPLETE": 12, "QUEUED": 9, "TESTING": 1, "total": 22},
+    "example_verified_work_today": "R23-12 merged as 09e55b85 after independent verification (TASK_VERIFIED 2026-10-21T22:06:27)"
+  },
+  "cost_accounting": {
+    "paid_calls_by_phase6b": 0,
+    "free_only_rule_respected": true,
+    "token_usage": "UNKNOWN (preserved from events)",
+    "cost_usd": "UNKNOWN (preserved from events)"
+  },
+  "pilot_metrics": {
+    "pilot_workers_started": 0,
+    "pilot_deliverables_verified": 0,
+    "reason": "admission disallowed everything at 6B entry and throughout (SEVERE hold, band PRESSED, LOW deferral); dry-run evidence in PHASE6B_WORKER_EVENTS.json"
+  }
+}
