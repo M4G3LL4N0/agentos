@@ -1,20 +1,29 @@
 """Regression: control/collector.py must be safely importable (Phase 5A/P4).
 
-The module-level `while True` loop (Phase-4B incident: duplicate live.json
-writers from a plain import) must live behind an explicit main() entry point.
-This test skips locally (the collector is server-only) and on the server
-asserts: import spawns no child process, mutates no state file, and returns
-while the service keeps running.
+The Phase-4B incident: a plain import of collector.py entered its module-level
+`while True` loop, spawning a duplicate live.json writer. The loop now lives
+behind main() + a __main__ guard. This test proves, on the server (skips
+locally where the file is absent):
+
+1. importing collector.py RETURNS promptly (a module-level loop hangs the
+   import forever — detected as subprocess timeout, so a regression fails
+   the suite instead of hanging it);
+2. the import spawns no collector process of its own;
+3. the source still carries the entry-point guard.
+
+Filesystem mtime is deliberately NOT asserted: the systemd-managed collector
+writes live.json every 2s, so any mtime comparison races the live service.
+Prompt return is the authoritative signal — the loop body is the only writer.
 """
 
 import importlib.util
-import os
+import subprocess
+import sys
 import time
 import unittest
 from pathlib import Path
 
 COLLECTOR = Path("/srv/noaerth/control/collector.py")
-LIVE_JSON = Path("/srv/noaerth/control/state/live.json")
 
 
 def _procs_matching(needle: str) -> int:
@@ -36,10 +45,29 @@ def _procs_matching(needle: str) -> int:
 
 @unittest.skipUnless(COLLECTOR.exists(), "collector.py is server-only")
 class TestCollectorImportable(unittest.TestCase):
-    def test_plain_import_has_no_side_effects(self) -> None:
-        before_live_mtime = LIVE_JSON.stat().st_mtime if LIVE_JSON.exists() else None
-        before_pids = _procs_matching("collector.py")
+    def test_import_returns_promptly_in_subprocess(self) -> None:
+        """A module-level loop would hang this child until the timeout fires."""
+        child = (
+            "import importlib.util, time\n"
+            f"spec = importlib.util.spec_from_file_location('collector_check', {str(COLLECTOR)!r})\n"
+            "mod = importlib.util.module_from_spec(spec)\n"
+            "t = time.time()\n"
+            "spec.loader.exec_module(mod)\n"
+            "print('IMPORT_DONE %.3f has_main=%s' % (time.time() - t, hasattr(mod, 'main')))\n"
+        )
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-c", child],
+                capture_output=True, text=True, timeout=15, check=False,
+            )
+        except subprocess.TimeoutExpired:
+            self.fail("import hung >=15s: module-level loop is back")
+        self.assertEqual(proc.returncode, 0, proc.stderr[-400:])
+        self.assertIn("IMPORT_DONE", proc.stdout)
+        self.assertIn("has_main=True", proc.stdout)
 
+    def test_plain_import_spawns_no_collector_process(self) -> None:
+        before = _procs_matching("collector.py")
         spec = importlib.util.spec_from_file_location(
             "collector_under_test", COLLECTOR
         )
@@ -47,29 +75,14 @@ class TestCollectorImportable(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         started = time.time()
         spec.loader.exec_module(module)
-        elapsed = time.time() - started
-
-        # Import must return promptly (a module-level loop would hang here).
-        self.assertLess(elapsed, 10.0, "import blocked: module-level loop still present")
-
-        # No collector process spawned by the import itself.
+        self.assertLess(time.time() - started, 10.0, "import blocked")
         time.sleep(0.5)
-        after_pids = _procs_matching("collector.py")
+        after = _procs_matching("collector.py")
+        # +1 tolerates the single systemd-managed instance already running.
         self.assertLessEqual(
-            after_pids, before_pids + 1,
-            f"import spawned collector processes: before={before_pids} after={after_pids}",
+            after, before + 1,
+            f"import spawned collector processes: before={before} after={after}",
         )
-        # +1 tolerates the systemd-managed instance already running.
-
-        # No live.json write from the import (mtime unchanged).
-        if before_live_mtime is not None and LIVE_JSON.exists():
-            after_live_mtime = LIVE_JSON.stat().st_mtime
-            self.assertEqual(
-                before_live_mtime, after_live_mtime,
-                "import mutated live.json — module-level side effect",
-            )
-
-        # The entry point exists for the systemd unit.
         self.assertTrue(hasattr(module, "main"), "collector.py lacks main() entry point")
 
     def test_main_guard_present_in_source(self) -> None:
