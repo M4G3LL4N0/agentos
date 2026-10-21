@@ -1,0 +1,92 @@
+{
+  "schema": "noaerth.phase5b.worker-evidence/1",
+  "generated_utc": "2026-10-21T02:30:00Z",
+  "phase": "5B",
+  "pilot_outcome": "BLOCKED",
+  "genuine_execution_this_phase": false,
+  "blocker": {
+    "kind": "resource_generated_hold",
+    "bypassed": false,
+    "detail": "AOS classify() SEVERE (disk_used_pct_80plus at ~84.3%, allow_new_work=false). Zero bytes authorized for reclaim (Phase 5A). Both Hive gates refused before any registry write."
+  },
+  "attempts": [
+    {
+      "id": "attempts[0]",
+      "kind": "hive_submit_dry_run",
+      "manifest": "/root/phase5b/candidate-manifest.json",
+      "task": {"id": "SERVEROS-5B-PILOT", "level": "LOW", "agent": "opencode", "cpu_heavy": false, "venture": "realm"},
+      "gate": "serveros_snapshot_gate",
+      "result": {
+        "accepted": false,
+        "reason": "serveros_low_priority_deferred",
+        "resource_band": "PRESSED",
+        "deferred_tasks": ["SERVEROS-5B-PILOT"],
+        "retry_after_s": 60,
+        "state_age_s": 51.4
+      },
+      "exit_code": 3,
+      "registry_untouched": true,
+      "registry_tasks_before_after": [67, 67]
+    },
+    {
+      "id": "attempts[1]",
+      "kind": "hive_submit_dry_run",
+      "manifest": "/root/phase5b/probe-manifest.json",
+      "task": {"id": "SERVEROS-5B-PROBE", "level": "MEDIUM", "agent": "opencode", "cpu_heavy": false, "venture": "realm"},
+      "gate": "resource_admission (AOS governor)",
+      "result": {
+        "accepted": false,
+        "reason": "resource_governor_hold",
+        "admission": "SEVERE",
+        "triggers": {
+          "mode": "SEVERE",
+          "allow_new_work": false,
+          "disk_used_pct": 84.3,
+          "cpu_usage": 36.23,
+          "reasons": ["allow_new_work_false", "mode_severe", "disk_used_pct_80plus"],
+          "state_ts": 1792548907.4999666
+        },
+        "retry_after_s": 5
+      },
+      "exit_code": 3,
+      "registry_untouched": true,
+      "registry_serveros_rows": 0
+    },
+    {
+      "id": "attempts[2]",
+      "kind": "worker_admission_cli_equivalent",
+      "profiles": ["heavyweight_coding/HIGH", "light/LOW", "verification/MEDIUM"],
+      "snapshot": "fresh published /var/lib/agentos/resource-snapshot.json",
+      "result": "all three can_start=false, constraining_resource=autonomousos_hold, retry_after_s=60",
+      "side_effects": "none (pure decision call)"
+    }
+  ],
+  "second_worker_p3": {
+    "attempted": false,
+    "decision": "BLOCKED",
+    "reason": "contingent on first admission; identical refusal guaranteed while hold persists — no redundant attempt"
+  },
+  "candidates_ready_for_when_hold_clears": [
+    "/root/phase5b/candidate-manifest.json (LOW pilot evidence task)",
+    "/root/phase5b/probe-manifest.json (MEDIUM probe)"
+  ],
+  "observed_production_execution_read_only": {
+    "note": "genuine live Hive/Studio executions belong to other actors and were observed, never touched",
+    "studio": {
+      "active_task": "R23-15 (realm, verify phase, RUNNING_SLOWLY, child_tree [bash, godot])",
+      "second_worker_preparing": "R21-10 (prepare, isolated worktree)",
+      "queue": {"COMPLETE": 51, "QUEUED": 14, "BLOCKED": 1, "SUPERSEDED": 1},
+      "lifecycle_events_seen": ["TASK_START", "RESUME", "PAUSE", "CANDIDATE_REBASED", "CANDIDATE_REUSE", "STAMP_PREFLIGHT", "INTEGRATE_ONLY"],
+      "checkpoints": ["APP-FACTORY-A-01", "PUBLISHING-P-02", "R21-10", "R23-13", "R23-15", "R23-17"]
+    },
+    "daemon": {"pid": 2988609, "alive": true, "heartbeat_age_s": "<30 at read"}
+  },
+  "protections_verified": {
+    "hold_bypassed": false,
+    "registry_written": false,
+    "other_ventures_touched": false,
+    "paid_inference": false,
+    "push": false,
+    "unauthorized_deletion": false
+  }
+}

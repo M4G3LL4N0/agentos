@@ -1,0 +1,497 @@
+{
+ "schema": "noaerth.phase5b.concurrency-benchmark/1",
+ "generated_utc": "2026-10-21T03:24:17Z",
+ "method": "pure admit_worker over compose_snapshot matrix; deterministic, zero side effects",
+ "summary": {
+  "cases": 40,
+  "admitted": 2,
+  "refused_or_deferred": 38,
+  "under_current_policy_allow_false_admitted": 0,
+  "fail_closed_band_unknown_admitted": 0
+ },
+ "rule_verified": {
+  "aos_allow_false_never_admits": true,
+  "storage_denied_never_admits": true,
+  "critical_band_never_admits": true,
+  "unknown_band_never_admits": true,
+  "healthy_full_matrix_admits": [
+   "heavyweight_coding",
+   "light"
+  ]
+ },
+ "cases": [
+  {
+   "band": "HEALTHY",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": true,
+   "retry_after_s": 0,
+   "constraining": "none"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": true,
+   "retry_after_s": 0,
+   "constraining": "none"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "storage_denied"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "storage_denied"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "HEALTHY",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 120,
+   "constraining": "heavy_under_pressure"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "low_priority_deferred"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "storage_denied"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "storage_denied"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "PRESSED",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 120,
+   "constraining": "heavy_under_pressure"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "low_priority_deferred"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "storage_denied"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "storage_denied"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "RECOVERING",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 60,
+   "constraining": "autonomousos_hold"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "CRITICAL",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 300,
+   "constraining": "band_critical"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": true,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": true,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": false,
+   "storage": "ALLOW",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "heavyweight_coding",
+   "level": "HIGH",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  },
+  {
+   "band": "UNKNOWN",
+   "aos_allow": false,
+   "storage": "DENY",
+   "profile": "light",
+   "level": "LOW",
+   "can_start": false,
+   "retry_after_s": 15,
+   "constraining": "unknown_source"
+  }
+ ],
+ "live_host_admission": {
+  "snapshot_fresh": true,
+  "profile_outcomes": [
+   {
+    "profile": "heavyweight_coding",
+    "level": "HIGH",
+    "can_start": false,
+    "constraining_resource": "autonomousos_hold",
+    "retry_after_s": 60,
+    "reason": "AutonomousOS governor holds allow_new_work=false"
+   },
+   {
+    "profile": "light",
+    "level": "LOW",
+    "can_start": false,
+    "constraining_resource": "autonomousos_hold",
+    "retry_after_s": 60,
+    "reason": "AutonomousOS governor holds allow_new_work=false"
+   },
+   {
+    "profile": "verification",
+    "level": "MEDIUM",
+    "can_start": false,
+    "constraining_resource": "autonomousos_hold",
+    "retry_after_s": 60,
+    "reason": "AutonomousOS governor holds allow_new_work=false"
+   }
+  ],
+  "host": {
+   "cpu_heavy_cap": 0,
+   "cpu_heavy_running": 2,
+   "cpu_heavy_remaining": 0,
+   "scheduler_active_workers": 4,
+   "queued_demand": 5,
+   "active_leases": 0,
+   "studio_queue": {
+    "COMPLETE": 51,
+    "QUEUED": 14,
+    "BLOCKED": 1,
+    "SUPERSEDED": 1
+   },
+   "band": "PRESSED",
+   "aos_mode": "SEVERE",
+   "disk_used_pct": 84.3
+  }
+ },
+ "observed_production_concurrency": {
+  "note": "other ventures' live workers observed read-only, never touched",
+  "execution_processes": [
+   {
+    "pid": 3100065,
+    "cmd": "godot --headless golden_scene_test (R21-10 conflict-preserved case)",
+    "elapsed": "3h54m"
+   },
+   {
+    "pid": 91069,
+    "cmd": "opencode serve --service",
+    "elapsed": "1d14h"
+   },
+   {
+    "pid": 3512066,
+    "cmd": "opencode run AudioOS v9-artist-album-schema (earlier sample)",
+    "elapsed": "19m"
+   }
+  ],
+  "hive_status_pending_approvals": 6,
+  "critical_path_length": 9
+ },
+ "second_worker": {
+  "attempted": false,
+  "reason": "contingent on first worker admission; first worker BLOCKED \u2014 a second submission would repeat the identical refusal, so no redundant side-effecting attempt was made",
+  "decision": "BLOCKED"
+ }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "noaerth.phase5b.agent-health/1",
+  "generated_utc": "2026-10-21T02:25:00Z",
+  "method": "honest probes only: agentos registry adapter probes (as agentos user), studio models.json binary lookup (portfolio, 3.1h cache), direct --version where safe; ABSENT/UNAVAILABLE never upgraded to OK",
+  "agentos_adapter_probes": {
+    "note": "run under AGENTOS_HOME=/var/lib/agentos as the agentos user — environment-specific",
+    "shell": "OK",
+    "filesystem": "OK",
+    "echo": "OK",
+    "opencode": "MISCONFIGURED",
+    "github": "AUTH_REQUIRED",
+    "xai": "AUTH_REQUIRED",
+    "hermes": "UNAVAILABLE",
+    "langgraph": "UNAVAILABLE",
+    "openclaw": "UNAVAILABLE",
+    "grok": "UNAVAILABLE",
+    "grokbot-office": "UNAVAILABLE",
+    "openhands": "UNAVAILABLE",
+    "browser-harness": "UNKNOWN"
+  },
+  "studio_production_executors": {
+    "note": "these are what REALM Studio actually routes to (portfolio user)",
+    "opencode": {"binary": "/home/portfolio/.local/bin/opencode", "present": true, "live_proof": "workers running (opencode run --standalone, opencode serve)"},
+    "claude": {"binary": "/home/portfolio/.local/bin/claude", "present": true},
+    "codex": {"binary": "/home/portfolio/.local/bin/codex", "present": true, "note": "codex-bwrap-unavailable.flag present (sandbox degraded); subscription_agents_allowed gates non-opencode routes"},
+    "cursor": {"binary": "/home/portfolio/.local/bin/agent + cursor-agent", "present": true, "note": "cursor_models list empty in 3.1h-old cache"},
+    "godot": {"binary": "/home/portfolio/.local/bin/godot; resolve_godot -> /srv/noaerth/realm-studio/tools/godot-4.7.2/godot", "present": true, "live_proof": "godot --headless golden_scene_test running 3h54m"},
+    "godot4": {"binary": null, "present": false},
+    "blender": {"binary": "/home/portfolio/.local/bin/blender", "present": true}
+  },
+  "inventory_requested_by_phase": {
+    "opencode": "present + live (portfolio); MISCONFIGURED under agentos user env",
+    "claude_code": "present (portfolio binary)",
+    "codex": "present (portfolio binary, bwrap flag degraded)",
+    "cursor": "present (agent + cursor-agent)",
+    "openclaw": "ABSENT binary; adapter UNAVAILABLE",
+    "hermes": "binary v0.22.2 present (/home/portfolio/.local/bin/hermes, install dir /srv/noaerth/agent-stack/hermes/src); adapter UNAVAILABLE (no successful probe under agentos)",
+    "langgraph": "ABSENT binary; adapter UNAVAILABLE (no langgraph runtime)",
+    "mcp_bridge": "agentos mcp_server module present (stdio JSON-RPC, stdlib); not running as a service",
+    "chatbridge": "client present at /srv/noaerth/chatbridge-client (cbclient.py, config.json, state/, secret/)",
+    "langfuse": "ABSENT (no matches under /srv/noaerth or /home/portfolio depth 3)",
+    "ai_mesh": "present: /srv/noaerth/autonomousos/mesh (admission/health/workers/recovery modules; the Phase-4B hooks live here)"
+  },
+  "deterministic_executors_usable_without_paid_inference": ["shell", "filesystem", "echo", "godot (verify gates)"],
+  "protections_verified": {"paid_calls": 0, "fabricated_health": false, "other_users_env_assumed": false}
+}

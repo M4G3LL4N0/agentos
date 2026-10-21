@@ -490,3 +490,19 @@ tiered-policy exhausted); ~4.45 G must free for disk<80%; journal 2.1 G
 awaits operator approval. Offline recovery bundle (44 commits, tip
 `6f1ec2b`) verified at `/var/backups/agentos/`. 952 local / 946 server /
 86 autonomousos tests OK. Live worker admission: BLOCKED, not bypassed.
+
+## Phase 5B end-state (2026-10-21)
+
+Phase 5B work is complete; outcome is BLOCKED at first controlled worker —
+AOS SEVERE hold (disk 84.3%, allow_new_work=false) refused both genuine Hive
+submissions pre-registry with full trigger evidence (not bypassed, registry
+untouched). P6 crash-recovery tests added (3). Control Tower serveros panel
+now carries aos_mode/allow_new_work/capacity_constraints/active_leases/
+provider_cooldown/disk_growth. Concurrency benchmark: 40-case pure matrix,
+fail-closed rules verified + live host admission (all profiles →
+autonomousos_hold, retry 60 s; cpu_heavy cap 0/running 2). Tests: 955 local
+(11 server-only skips) / 949 server OK. Release readiness: 6
+REVIEW_REQUIRED reported-only. Next: operator frees ≥4.8 GiB (journal
+vacuum first), re-run classify(), resubmit /root/phase5b/candidate
+(-manifest) as first genuine worker, then P3 second worker. Bundle refresh
+required at session end (stale by the new commits). Pushes: 0.

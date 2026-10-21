@@ -605,3 +605,28 @@ workers admission still BLOCKED (SEVERE, not bypassed). Deliverables:
 PHASE5A_STORAGE_FORENSICS.md, PHASE5A_HOLD_OWNERSHIP.md,
 PHASE5A_ADMISSION_READINESS.json, PHASE5A_TEST_REPORT.md. Pushes: 0.
 Paid calls: 0. Deletions: 0.
+
+## 2026-10-21 — Phase 5B: verified parallel Hive production (outcome: BLOCKED, honest)
+
+P0 admission gate proven live (SEVERE, disk 84.3%, allow_new_work=false,
+authorized reclaim 0 B — never bypassed). P1 traced the real production
+invocation path (submit_manifest → execute_one L372 → run_agent L184 →
+godot_verify/integrate → recover L519 / auto_retry L527). P2: two genuine
+Hive submissions (LOW candidate + MEDIUM probe) both refused pre-registry
+(gate reasons `serveros_low_priority_deferred` + `resource_governor_hold`
+with full triggers); registry 67→67, 0 SERVEROS rows; candidates preserved
+at /root/phase5b/. P3 second worker: BLOCKED, not attempted (identical
+refusal deterministic — no redundant side effect). P4 teams/status reads
+(critical path 9, 6 approvals pending). P5 agent inventory
+(PHASE5B_AGENT_HEALTH.json; no paid probes). P6: 3 new crash-recovery
+integration tests (lease replace-not-duplicate, no unrelated-task block,
+rollback_critical retained). P7: Control Tower serveros panel extended with
+aos_mode/allow/constraints/leases/cooldown/growth (.bak-5b-20261021), live
+age ~1 s, studio fields honestly null under DB lock. P8: 6
+REVIEW_REQUIRED releases reported, none approved. P9: 955 local OK (11
+server-only skips) + 949 server OK; 40-case pure admission matrix verified
+(allow-false/storage-deny/CRITICAL/UNKNOWN all admit 0) + live admission
+all-`autonomousos_hold`. Deliverables: PHASE5B_HIVE_PRODUCTION.md,
+PHASE5B_WORKER_EVIDENCE.json, PHASE5B_CONCURRENCY_BENCHMARK.json,
+PHASE5B_AGENT_HEALTH.json, NOAERTH_PHASE5_HANDOFF.md. Pushes: 0. Paid
+calls: 0. Deletions: 0.

@@ -380,5 +380,105 @@ class TestAuditAndScratchLeases(unittest.TestCase):
         self.assertIn("disposable", RETENTION_POLICIES)
 
 
+class TestCrashRecoveryIntegration(unittest.TestCase):
+    """Phase 5B/P6: interrupted worker -> lease survives -> recovery completes.
+
+    The crash model: `complete_scratch` never runs (daemon dies while the
+    lease is ACTIVE). Recovery = re-registration for the same task (Studio's
+    auto_retry re-queues) must not duplicate or lock the registry, and a
+    subsequent verified completion must retire + reap exactly once. A crashed
+    lease must also never block an unrelated new task.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name)
+        self.registry = self.dir / "scratch-leases.json"
+        self.stub_janitor = self.dir / "janitor"
+        self.stub_janitor.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        self.stub_janitor.chmod(0o755)
+        old = os.environ.get("AGENTOS_RES_JANITOR")
+        os.environ["AGENTOS_RES_JANITOR"] = str(self.stub_janitor)
+        self.addCleanup(self._restore_janitor, old)
+
+    @staticmethod
+    def _restore_janitor(old: str | None) -> None:
+        if old is None:
+            os.environ.pop("AGENTOS_RES_JANITOR", None)
+        else:
+            os.environ["AGENTOS_RES_JANITOR"] = old
+
+    def _register(self, task_id: str, now: float | None = None) -> dict:
+        return register_scratch(
+            task_id=task_id,
+            venture_id="serveros",
+            workspace=f"/srv/noaerth/w/{task_id}",
+            scratch_root=f"/srv/noaerth/scratch/{task_id}",
+            storage_budget=1024,
+            owner="phase5b-test",
+            retention_policy="disposable",
+            registry=self.registry,
+            now=now,
+        )
+
+    def test_crashed_lease_recovers_via_reregistration(self) -> None:
+        first = self._register("R-5B-01", now=1_760_000_000.0)
+        self.assertEqual(first["lease_state"], "ACTIVE")
+        # --- crash: nothing else runs; the ACTIVE lease is orphaned ---
+        orphaned = list_leases(registry=self.registry)
+        self.assertEqual(len(orphaned), 1)
+        self.assertEqual(orphaned[0]["lease_state"], "ACTIVE")
+        self.assertNotIn("completed_utc", orphaned[0])
+        # --- recovery: daemon restart re-registers the same task ---
+        second = self._register("R-5B-01", now=1_760_000_600.0)
+        self.assertEqual(second["lease_state"], "ACTIVE")
+        records = list_leases(registry=self.registry)
+        self.assertEqual(len(records), 1, "re-registration must replace, not duplicate")
+        self.assertEqual(records[0]["created_epoch"], 1_760_000_600.0)
+        # --- verified completion after recovery retires and reaps once ---
+        result = complete_scratch(task_id="R-5B-01", registry=self.registry)
+        self.assertTrue(result["ok"])
+        final = list_leases(registry=self.registry)
+        self.assertEqual(len(final), 1)
+        self.assertEqual(final[0]["lease_state"], "RETIRED")
+        self.assertTrue(final[0]["cleanup"]["requested"])
+        self.assertEqual(final[0]["cleanup"]["policy"], "disposable")
+
+    def test_crashed_lease_does_not_block_unrelated_task(self) -> None:
+        self._register("R-5B-02", now=1_760_000_000.0)  # crashes, never completes
+        second = self._register("R-5B-03", now=1_760_000_300.0)
+        self.assertEqual(second["lease_state"], "ACTIVE")
+        leases = {r["task_id"]: r for r in list_leases(registry=self.registry)}
+        self.assertEqual(set(leases), {"R-5B-02", "R-5B-03"})
+        self.assertEqual(leases["R-5B-02"]["lease_state"], "ACTIVE")
+        # independent completion of the crashed lease after later recovery
+        result = complete_scratch(task_id="R-5B-02", registry=self.registry)
+        self.assertTrue(result["ok"])
+        self.assertEqual(
+            {r["task_id"]: r["lease_state"] for r in list_leases(registry=self.registry)},
+            {"R-5B-02": "RETIRED", "R-5B-03": "ACTIVE"},
+        )
+
+    def test_rollback_critical_crash_lease_is_retained_not_reaped(self) -> None:
+        record = register_scratch(
+            task_id="R-5B-04",
+            venture_id="serveros",
+            workspace="/srv/noaerth/w/R-5B-04",
+            scratch_root="/srv/noaerth/scratch/R-5B-04",
+            storage_budget=1024,
+            owner="phase5b-test",
+            retention_policy="rollback_critical",
+            registry=self.registry,
+        )
+        self.assertEqual(record["lease_state"], "ACTIVE")
+        result = complete_scratch(task_id="R-5B-04", registry=self.registry)
+        self.assertTrue(result["ok"])
+        lease = list_leases(registry=self.registry)[0]
+        self.assertEqual(lease["lease_state"], "COMPLETED_PENDING_REAP")
+        self.assertFalse(lease["cleanup"]["requested"])
+        self.assertIn("retained", lease["cleanup"]["detail"])
+
+
 if __name__ == "__main__":
     unittest.main()
