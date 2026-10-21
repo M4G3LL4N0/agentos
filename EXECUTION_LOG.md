@@ -630,3 +630,16 @@ all-`autonomousos_hold`. Deliverables: PHASE5B_HIVE_PRODUCTION.md,
 PHASE5B_WORKER_EVIDENCE.json, PHASE5B_CONCURRENCY_BENCHMARK.json,
 PHASE5B_AGENT_HEALTH.json, NOAERTH_PHASE5_HANDOFF.md. Pushes: 0. Paid
 calls: 0. Deletions: 0.
+
+## 2026-10-21 (later) — final audit: test-drift sync + rollback verification
+
+Post-commit audit found two-way test drift: 3 Phase-5A governor tests lived
+only on the server, 9 growth tests only locally. Synced both directions;
+file sets identical (63 files / 958 tests each side). Suites: 958 local OK
+(14 server-only skips) / 958 server OK / 86 autonomousos OK. P8 rollback
+targets re-verified as portfolio owner (root reads trip git dubious-ownership):
+all 5 REVIEW_REQUIRED rollback commits EXIST (publishing 664b20e/e4148ce,
+app-factory 7a1a584, demo-greeter ec7177f/991cc24) — commands functional
+as recorded; REL-realm-e5b5dd7f has no rollback. Local suite slow (635 s)
+only due to another actor's home-directory du scan (load 48→30), not a
+test fault. Bundle re-refreshed after this commit.

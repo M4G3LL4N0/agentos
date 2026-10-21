@@ -201,6 +201,45 @@ class TestServerosHiveGate(unittest.TestCase):
         self.assertTrue(result["accepted"])
         self.assertEqual(self._rows("SELECT id FROM tasks"), ["GATE-G-01"])
 
+    def test_restrictive_policy_survives_every_snapshot_state(self) -> None:
+        """Stale/absent/HEALTHY snapshots must never override AOS hold."""
+        self._write_resource(allow=False)  # mode=SEVERE, allow_new_work=false
+        for label, kwargs in (
+            ("absent", {"snapshot": False}),
+            ("stale_critical", {"name": "R1"}),
+            ("fresh_healthy", {"name": "R2"}),
+        ):
+            if label == "stale_critical":
+                self._write_snapshot("CRITICAL", age_s=9999)
+            elif label == "fresh_healthy":
+                self._write_snapshot("HEALTHY", age_s=1.0)
+            result = self._submit(
+                [ _task(f"GOV-{label.upper()[:4]}-01", "HIGH") ], **kwargs
+            )
+            with self.subTest(snapshot=label):
+                self.assertFalse(result["accepted"])
+                self.assertEqual(result["reason"], "resource_governor_hold")
+        self.assertEqual(self._rows("SELECT id FROM tasks"), [])
+
+    def test_hold_refusal_carries_measured_triggers(self) -> None:
+        """Refusal must name WHY (disk/cpu/mode), not just the reason code."""
+        self._write_resource(allow=False, used_pct=83.5)
+        result = self._submit([_task("GOV-TRIG-01", "HIGH")], name="trig")
+        self.assertFalse(result["accepted"])
+        triggers = (result.get("resource") or {}).get("triggers") or result.get("triggers") or {}
+        self.assertIn("disk_used_pct_80plus", triggers.get("reasons", []))
+        self.assertIn("mode_severe", triggers.get("reasons", []))
+        self.assertGreaterEqual(triggers.get("disk_used_pct", 0.0), 80.0)
+
+    def test_fresh_critical_snapshot_refuses_even_when_resource_allows(self) -> None:
+        """Both gates fail closed; either refusal is sufficient."""
+        self._write_resource(allow=True, used_pct=50.0)
+        self._write_snapshot("CRITICAL", age_s=1.0)
+        result = self._submit([_task("GOV-CRIT-01", "HIGH")], name="crit")
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "serveros_band_critical")
+        self.assertEqual(self._rows("SELECT id FROM tasks"), [])
+
     def test_recovering_defers_low_like_pressed(self) -> None:
         self._write_snapshot("RECOVERING")
         result = self._submit([_task("GATE-H-01", "LOW")])

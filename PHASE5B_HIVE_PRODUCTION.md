@@ -103,6 +103,12 @@ Studio-side recovery path read in P1 (`recover()` / `auto_retry()`).
   rollback commands (publishing ×2, app-factory, demo-greeter ×2);
   REL-realm-e5b5dd7f has only the CLI REVIEW_REQUIRED transition record, no
   final approval, no rollback command.
+- **Rollback targets verified read-only** (as portfolio owner; root reads
+  trip git's dubious-ownership guard): all 5 rollback commits EXIST in the
+  venture repos — publishing `664b20e`/`e4148ce`, app-factory `7a1a584`,
+  demo-greeter `ec7177f`/`991cc24` — each is the parent baseline behind the
+  reviewed tip (HEADs: `7db7310`, `73b75d0`, `5beb597`). Rollback commands
+  are functional as recorded. REL-realm-e5b5dd7f has none.
 - `releases/`: 28 archived snapshots; pointer `aos3-release` →
   `aos3-20261013T192232Z`.
 
@@ -110,10 +116,17 @@ Studio-side recovery path read in P1 (`recover()` / `auto_retry()`).
 
 | Suite | Result |
 |---|---|
-| local `python3 -m unittest discover -s tests` | **955 OK** (11 server-only skips), 258 s |
-| server (as agentos user, AGENTOS_HOME) | **949 OK**, 94 s (test file synced) |
-| Growth/collector tests | included (+9 growth, +3 collector, +3 crash-recovery vs. 5A baseline) |
-| Bundle before refresh | 44 commits verified by bare clone (stale by design until refresh) |
+| local `python3 -m unittest discover -s tests` | **958 OK** (14 server-only skips: 11 gate + 3 collector), 635 s under host load |
+| server (as agentos user, AGENTOS_HOME) | **958 OK**, 123 s (0 skips) |
+| autonomousos (server) | **86 OK**, 4.5 s |
+| Growth/collector/crash-recovery tests | included on both sides after two-way sync |
+| Bundle (refreshed post-commit) | verified by bare clone |
+
+**Two-way test sync performed** (drift found during final audit): the 3
+Phase-5A governor tests existed only server-side — synced into the repo;
+the 9 growth tests existed only locally — synced to the server. Test-file
+sets now identical (63 files, 958 tests each). `src/` drift: none (only
+egg-info build metadata).
 
 ### Concurrency benchmark (`PHASE5B_CONCURRENCY_BENCHMARK.json`)
 
