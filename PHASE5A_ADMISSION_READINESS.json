@@ -1,0 +1,59 @@
+{
+ "schema": "noaerth.phase5a-readiness/1",
+ "generated_utc": "2026-10-21T02:09:33Z",
+ "ready_for_live_workers": false,
+ "blocking_reason": "autonomousos_severe_hold_disk_above_80pct",
+ "hold": {
+  "mode": "SEVERE",
+  "allow_new_work": false,
+  "disk_used_pct": 84.65,
+  "cpu_usage": 39.44,
+  "owner": "resource_generated",
+  "operator_note": null,
+  "bypassed": false
+ },
+ "snapshot": {
+  "fresh": true,
+  "age_s": 89.2,
+  "band": "PRESSED",
+  "growth_samples": 51,
+  "disk_growth_bytes_per_day": -13130079907.122637,
+  "growth_source": "agentos.growth_history",
+  "eta_to_warn_floor_s": 0.0
+ },
+ "disk": {
+  "total_bytes": 102888095744,
+  "used_pct": 84.64,
+  "free_bytes": 15787188224,
+  "bytes_to_free_for_80pct": 4773653709
+ },
+ "authorized_reclaim_bytes": 0,
+ "reclaim_awaiting_operator": {
+  "journal_vacuum_to_500m_bytes": 1677721600,
+  "phase4a_manifest_paths": 394,
+  "phase4a_manifest_bytes_approx": 96468992
+ },
+ "tests": {
+  "local": "952 OK (11 server-only skips)",
+  "server": "946 OK"
+ },
+ "git": {
+  "branch": "main",
+  "commits_ahead_of_origin": 37,
+  "pushed": false
+ },
+ "recovery_bundle": {
+  "path": "/var/backups/agentos/agentos-full-recovery.bundle",
+  "bytes": 747082,
+  "commits": 44,
+  "tip": "6f1ec2b",
+  "verified": true
+ },
+ "protections_verified": {
+  "operator_hold_bypassed": false,
+  "paid_inference_used": false,
+  "push_performed": false,
+  "unauthorized_deletion": false,
+  "other_ventures_modified": false
+ }
+}

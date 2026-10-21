@@ -470,3 +470,23 @@ fleet-doctor `resource_health` key, `GET /resource`. 940/940 tests green
 local + server; live admission correctly defers to the AOS
 allow_new_work=false hold. Details: `PHASE4B_GOVERNOR_INTEGRATION.md`,
 `PHASE4B_ACCEPTANCE.json`, `NOAERTH_RESOURCE_CONTRACT.json`.
+
+## Phase 5A — storage forensics + admission readiness (2026-10-21, DONE)
+
+Disk growth is now measured, not borrowed: `resource-growth.json` accrues
+one (epoch, free) sample per publish (caps 180 raw / 168 hourly, atomic
+0644) and `disk_growth` reports the measured short rate
+(`agentos.growth_history`) ahead of the JanitorOS forecast, UNKNOWN until
+≥3 samples span ≥600 s (never 0), with ETA to the 20 GiB warn floor only
+from a supported negative rate. Collector.py module-level loop moved
+behind `main()` + `__main__` guard (hermetic timeout-based regression
+test). AOS hold ownership proven resource-generated (governor
+`classify()` disk≥80 lane, notes=[], no expiry; cpu>97 lane self-cleared)
+— refusals now carry `triggers{reasons[]}` in Hive and the fleet doctor
+exposes `aos_mode/allow/constraints/growth-eta`; 3 tests prove
+restrictive policy survives every snapshot state. Forensics: authorized
+reclaim = 0 B today (janitor autonomy DISABLED + empty approvals +
+tiered-policy exhausted); ~4.45 G must free for disk<80%; journal 2.1 G
+awaits operator approval. Offline recovery bundle (44 commits, tip
+`6f1ec2b`) verified at `/var/backups/agentos/`. 952 local / 946 server /
+86 autonomousos tests OK. Live worker admission: BLOCKED, not bypassed.

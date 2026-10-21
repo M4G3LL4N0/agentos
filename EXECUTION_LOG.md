@@ -575,3 +575,33 @@ zombies/finds/leases, band PRESSED held (no oscillation), studio RUNNING
 mode 664→0644 for cross-user readers. Incidents handled: stray collector
 import (duplicate live.json writer) killed <3min, atomic writes absorbed
 it. Pushes: 0. Paid calls: 0. Deletions: 0.
+
+Phase 5A storage forensics + readiness (2026-10-21, DONE — BLOCKED on
+authorized reclaim): bounded disk map (friendsos sprint 17.1G + realm
+workspace 16G are other-venture/active and protected; journal 2.1G is the
+largest out-of-policy candidate; no deleted-open files). Janitor authority
+review: deletion_autonomy DISABLED, roots /tmp+/var/tmp, approvals empty,
+scan found 0 reclaimable bytes; tiered storage-janitor already ran within
+policy (heavy reclaimed 0B, fast in no-op cooldown) so authorized reclaim
+= 0 B while AOS needs ~4.45G to drop below disk 80%. Hold ownership
+proved resource-generated (governor classify() ladder, notes=[], no
+expiry): sole live trigger disk_used_pct_80plus at ~84.6%; cpu lane
+self-cleared. disk_growth measurement implemented: bounded sample store
+(180 raw + 168 hourly caps, atomic 0644) recorded on every publish,
+measured short rate now precedes janitor forecast, UNKNOWN never 0, ETA
+to 20GiB warn floor only from a supported negative rate (live: 51+
+samples, field source agentos.growth_history). Collector import guard:
+module-level loop wrapped in main() (.bak-5a-20261021), service
+restarted, hermetic subprocess-timeout regression test (first draft's
+mtime assertion raced the live 2s writer — fixed in 6f1ec2b). Hold
+visibility: Hive refusals carry triggers{mode,allow,disk,cpu,reasons[]},
+fleet doctor exposes aos_mode/allow/constraints/growth-eta (.bak-5a). 3
+governor-correctness tests prove stale/absent/HEALTHY snapshots never
+override restrictive policy. Full-history git bundle (747082B, 44
+commits, tip 6f1ec2b) verified by bare clone at
+/var/backups/agentos/agentos-full-recovery.bundle. Tests: 952 local OK
+(11 server-only skips) + 946 server OK + 86 autonomousos OK. Live
+workers admission still BLOCKED (SEVERE, not bypassed). Deliverables:
+PHASE5A_STORAGE_FORENSICS.md, PHASE5A_HOLD_OWNERSHIP.md,
+PHASE5A_ADMISSION_READINESS.json, PHASE5A_TEST_REPORT.md. Pushes: 0.
+Paid calls: 0. Deletions: 0.
