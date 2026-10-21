@@ -643,3 +643,31 @@ app-factory 7a1a584, demo-greeter ec7177f/991cc24) — commands functional
 as recorded; REL-realm-e5b5dd7f has no rollback. Local suite slow (635 s)
 only due to another actor's home-directory du scan (load 48→30), not a
 test fault. Bundle re-refreshed after this commit.
+
+## 2026-10-21 — Phase 6A: production unlock (outcome: precise blocker + operator menu; 0 bytes reclaimed)
+
+P0 forensics: disk 85.76% (worse than 5B's 84.3%), need 5.52 GiB for
+<80%. classify() ladder read from source: disk>=80 -> SEVERE is the SOLE
+live rung (mem/cpu/io clear, notes=[]). Growth attributed: 17 identical
+195MB REALM source tarballs (sha256-verified) across Studio case dirs
+(~2.91 GiB duplicates), paios.service flooding journals (~570 lines/min,
+STATUS=FAILED loop, unbounded 191MB tee'd log, ~0.4 GiB/day journals),
+rsyslog +65MB/day in-policy. Single collector/studio; zero reactors.
+JanitorOS: autonomy DISABLED, scan 0 eligible, ai_calls=0. P1: journald
+on defaults (no ceiling) -> vacuum needs authorization; syslog.1 in-policy;
+deleted-open negligible (16.6MiB). Accidental disclosure: `janitor-db-downsample
+--help` has no guard and executed the authorized daily compaction on
+portfolio janitor.db (96136 rows kept, 0 net bytes, no loss). Approval
+menu prepared byte-counted: A journal->400M 1.86G, B apt clean 0.42G,
+C stale pre-downsample.bak 0.94G, D tarball hardlink-dedup 2.91G,
+E idle worktrees 2.3G, F syslog.1 waiver 0.72G; A+B+C+D=6.13G closes gap.
+P2: growth store operational (180 raw, +2.07G free in 6h window); backups
+bounded; no duplicate authorities; gaps proposed (journald SystemMaxUse,
+paios fix, studio artifact dedup). P3: SEVERE re-derived, Studio
+paused=True left intact, no manual band change, transition path = free
+space only. P4: 6afdf68 + bundle (47 commits) verified; no off-host
+backup exists; restic runbook prepared (operator-run, nothing executed).
+P5: focused 89 OK local; full 958 agentos + 86 autonomousos OK server.
+6B NOT eligible. Deliverables: PHASE6A_STORAGE_RECOVERY.md,
+PHASE6A_ADMISSION_STATE.json, PHASE6A_SOURCE_SAFETY.md. Paid calls: 0.
+Pushes: 0. Unauthorized deletions: 0.

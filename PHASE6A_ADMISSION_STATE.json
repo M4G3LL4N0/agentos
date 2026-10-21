@@ -1,0 +1,92 @@
+{
+  "schema": "noaerth.phase6a.admission-state/1",
+  "generated_utc": "2026-10-21T20:45:00Z",
+  "server": "vmi3635094",
+  "agentos_tip": "6afdf68",
+  "disk": {
+    "total_bytes": 102888095744,
+    "used_bytes": 88238874624,
+    "avail_bytes": 14632443904,
+    "used_pct": 85.76,
+    "bytes_to_free_for_80pct": 5928398029,
+    "gib_to_free_for_80pct": 5.52
+  },
+  "governor": {
+    "classify_source": "/srv/noaerth/autonomousos/governor.py:281",
+    "ladder_disk_critical": "disk_pct >= 90",
+    "ladder_disk_severe": "disk_pct >= 80 -> SEVERE, allow_new_work=false, cpu_heavy_cap=0",
+    "mode": "SEVERE",
+    "allow_new_work": false,
+    "sole_trigger": "disk_used_pct_80plus",
+    "notes": [],
+    "other_rungs_clear": {
+      "mem_available_gb": 9.8,
+      "psi_cpu_avg10": 10.7,
+      "cpu_bound_threshold": "busy>=50 or psi_cpu>=50",
+      "verdict": "memory/CPU/IO rungs not triggered; disk rung governs"
+    },
+    "history": "continuous SEVERE across last 80 samples (~7 min) and since Phase 5",
+    "distance_to_critical_pct_points": 4.24
+  },
+  "snapshot": {
+    "path": "/var/lib/agentos/resource-snapshot.json",
+    "freshness_age_s_at_read": 1.4,
+    "publisher": "root cron */2 via `noaerth agentos governor snapshot --publish`",
+    "band": "PRESSED",
+    "storage_admission": "ALLOW",
+    "capacity_constraints": ["band_pressed", "autonomousos_allow_new_work_false"],
+    "active_leases": 0,
+    "provider_cooldown": "UNKNOWN",
+    "unknown_fields": []
+  },
+  "growth_store": {
+    "path": "/var/lib/agentos/resource-growth.json",
+    "operational": true,
+    "raw_samples": 180,
+    "hourly_samples": 20,
+    "window_6h_free_delta_gib": 2.07,
+    "note": "free space grew in window (other actors active); store capped and accruing"
+  },
+  "operator_controls_observed": {
+    "studio_paused": true,
+    "studio_pause_cleared_by_me": false,
+    "janitor_autonomy": "DISABLED",
+    "janitor_approvals": "empty (no eligible cleanup)",
+    "janitor_scan": "89807 files / 1.7GiB across 3 roots / 0 eligible artifacts / ai_calls=0"
+  },
+  "reclaim": {
+    "bytes_reclaimed_this_phase": 0,
+    "gib_available": 13.63,
+    "gib_needed": 5.52,
+    "authorized_ops_executed": [
+      {
+        "op": "janitor-db-downsample (portfolio cron-equivalent)",
+        "trigger": "accidental: script has no --help guard",
+        "effect": "compacted already-compact janitor.db, 96136 rows kept, 0 net bytes, no data loss"
+      }
+    ],
+    "unauthorized_actions": 0,
+    "protected_trees_touched": 0
+  },
+  "approval_menu": [
+    {"id": "A", "op": "journalctl --rotate && journalctl --vacuum-size=400M", "frees_gib": 1.86, "authority": "administrator", "status": "awaiting_approval"},
+    {"id": "B", "op": "apt-get clean", "frees_gib": 0.42, "authority": "administrator", "status": "awaiting_approval"},
+    {"id": "C", "op": "rm /home/portfolio/.local/state/janitoros/janitor.db.pre-downsample.bak", "frees_gib": 0.94, "authority": "administrator (superseded backup)", "status": "awaiting_approval"},
+    {"id": "D", "op": "hardlink-dedup 17 identical REALM-source-18.0-*.tgz (sha256 292fc56e...)", "frees_gib": 2.91, "authority": "REALM Studio owner + operator", "status": "awaiting_approval"},
+    {"id": "E", "op": "retire idle worktrees artblitz/mira-nav/kimi-burst (lsof=0)", "frees_gib": 2.3, "authority": "venture owners", "status": "awaiting_approval"},
+    {"id": "F", "op": "early-delete syslog.1", "frees_gib": 0.72, "authority": "retention waiver", "status": "awaiting_approval"}
+  ],
+  "recommended_package": {
+    "ids": ["A", "B", "C", "D"],
+    "total_frees_gib": 6.13,
+    "closes_gap": true
+  },
+  "transition_path": {
+    "official_control_only": true,
+    "mechanism": "free >=5.52GiB -> next classify() rung falls through disk gate -> allow_new_work=true",
+    "manual_band_change": false,
+    "hold_bypassed": false
+  },
+  "phase6b_eligible": false,
+  "phase6b_blocker": "disk 85.76% >= 80% policy floor; recommended package A+B+C+D awaits operator approval"
+}

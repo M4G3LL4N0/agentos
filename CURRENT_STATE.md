@@ -506,3 +506,18 @@ REVIEW_REQUIRED reported-only. Next: operator frees ≥4.8 GiB (journal
 vacuum first), re-run classify(), resubmit /root/phase5b/candidate
 (-manifest) as first genuine worker, then P3 second worker. Bundle refresh
 required at session end (stale by the new commits). Pushes: 0.
+
+## Phase 6A end-state (2026-10-21)
+
+Admission still BLOCKED — disk 85.76% (need 5.52 GiB for <80%); AOS
+SEVERE from disk rung alone; hold untouched. Zero bytes reclaimed (nothing
+eligible under existing authority; JanitorOS scan 0 eligible). Operator
+approval menu delivered (A journal 1.86G / B apt 0.42G / C stale janitor
+backup 0.94G / D REALM tarball hardlink-dedup 2.91G / E idle worktrees
+2.3G / F syslog.1 waiver 0.72G); recommended A+B+C+D = 6.13G closes the
+gap. Growth drivers: identical 195MB REALM tarballs per Studio case dir,
+paios.service log flood (~0.4 GiB/day journals). Studio paused (operator,
+untouched). No off-host backup exists — restic runbook in
+PHASE6A_SOURCE_SAFETY.md. Bundle verified at 6afdf68. Suites: 958+86 OK.
+Next: operator executes approved menu subset -> governor self-clears ->
+re-verify classify() -> Phase 6B eligible. Tip 6afdf68, 40 unpushed.
