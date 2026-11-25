@@ -229,8 +229,6 @@ class AgentOSHandler(BaseHTTPRequestHandler):
 
 
 def _is_loopback_host(host: str) -> bool:
-    if host.lower() == "localhost":
-        return True
     try:
         address = ipaddress.ip_address(host.split("%", 1)[0])
     except ValueError:
@@ -259,8 +257,9 @@ def create_server(
 
     Tokens default to AGENTOS_API_TOKEN and AGENTOS_API_READ_TOKEN. A read
     token authorizes GET routes only; the main token authorizes all routes.
-    Non-loopback binds require the main token. Remote deployments still need
-    an encrypted private transport (for example, a private mesh or TLS proxy).
+    This stdlib server is plain HTTP and refuses non-loopback binds. For
+    remote access, put it behind an encrypted private transport (for example,
+    a private mesh or TLS proxy) and keep this server bound to loopback.
     """
     if auth_token is None:
         auth_token = os.environ.get("AGENTOS_API_TOKEN") or None
@@ -270,8 +269,10 @@ def create_server(
     _validate_api_token(read_token, "AGENTOS_API_READ_TOKEN")
     if read_token is not None and auth_token is None:
         raise ValueError("AGENTOS_API_TOKEN is required when a read-only token is configured")
-    if not _is_loopback_host(host) and auth_token is None:
-        raise ValueError("AGENTOS_API_TOKEN is required for non-loopback API binding")
+    if not _is_loopback_host(host):
+        raise ValueError(
+            "AgentOS HTTP API only supports loopback binds; use a TLS/private-network proxy for remote access"
+        )
 
     server = ThreadingHTTPServer((host, port), AgentOSHandler)
     server.app = app  # type: ignore[attr-defined]
