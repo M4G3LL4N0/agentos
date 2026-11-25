@@ -59,7 +59,7 @@ def check_health(token: str, timeout: float = 3.0) -> bool:
             if response.status != 200:
                 return False
             payload = json.loads(response.read(16_384).decode("utf-8"))
-            return isinstance(payload, dict) and payload.get("ok") is True and payload.get("healthy") is True
+            return isinstance(payload, dict) and payload.get("healthy") is True
         finally:
             response.close()
     except (OSError, http.client.HTTPException, ValueError, UnicodeDecodeError):
