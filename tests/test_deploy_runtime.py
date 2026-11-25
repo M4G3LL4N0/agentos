@@ -91,7 +91,7 @@ class DeploymentRuntimeTests(unittest.TestCase):
                 def close(self): return None
                 def read(self, limit):
                     captured["read_limit"] = limit
-                    return b'{"ok":true,"healthy":true}'
+                    return b'{"healthy":true,"version":"0.5.0"}'
 
             class Connection:
                 def __init__(self, host, port, timeout):
@@ -114,6 +114,21 @@ class DeploymentRuntimeTests(unittest.TestCase):
             self.assertEqual(captured["authorization"], "Bearer " + "a" * 64)
             self.assertEqual(captured["timeout"], 3.0)
             self.assertEqual(captured["read_limit"], 16_384)
+
+    def test_healthcheck_rejects_unhealthy_api_response(self):
+        class Response:
+            status = 200
+            def close(self): return None
+            def read(self, limit): return b'{"healthy":false,"version":"0.5.0"}'
+
+        class Connection:
+            def __init__(self, host, port, timeout): pass
+            def request(self, method, path, headers): pass
+            def getresponse(self): return Response()
+            def close(self): return None
+
+        with patch.object(HEALTH.http.client, "HTTPConnection", Connection):
+            self.assertFalse(HEALTH.check_health("c" * 64))
 
     def test_healthcheck_rejects_broad_file_permissions_symlinks_and_invalid_token(self):
         with tempfile.TemporaryDirectory() as tmp:
