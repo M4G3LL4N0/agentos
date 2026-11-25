@@ -7,14 +7,14 @@ entries are not permitted here.
 
 - Branch `apn/http-api-auth-boundary` adds HTTP bearer authentication for
   GET/POST routes, optional GET-only read token, constant-time token compare,
-  token-strength checks, and refusal of non-loopback binds without a write
-  token. Unauthenticated loopback development remains compatible.
+  token-strength checks, and refusal of every non-loopback bind because the
+  server is plaintext HTTP. Unauthenticated loopback development remains
+  compatible; remote access requires an encrypted proxy.
 - Added API tests for read/write separation and non-loopback bind policy.
-- Tests have not been run in the available environment; repository CI and
-  independent security review are pending. This change is not merged or
+- GitHub Actions passed on Python 3.11 and 3.12, including the secret scan.
+  Independent security review remains pending. This change is not merged or
   deployed. No live servers, Telegram, or Vercel production deployment were
-  changed. Remote use still requires encrypted private transport; this is
-  not per-user authorization.
+  changed. It is not per-user authorization.
 
 ## 2026-09-17 — Part A foundation build (v0.1.0)
 
