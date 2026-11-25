@@ -1,7 +1,7 @@
 # Roadmap
 
 1. Keep the v0.5.0 release reproducible on the supported Python matrix.
-2. Add a production authentication and authorization boundary for the HTTP API.
+2. Review the branch-only HTTP bearer-auth proposal, then design per-identity authorization and deployment-grade transport before any remote exposure.
 3. Add execution sandboxing and stronger approval UX.
 4. Build a first-class MCP client behind explicit review and credential policy.
 5. Add portable schema migrations and reviewed external-worker adapters.
