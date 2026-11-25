@@ -6,7 +6,8 @@ If this file and behaviour disagree, behaviour wins; fix this file.
 ## Round 13 — HTTP API authentication boundary proposal (branch-only, not deployed)
 
 Branch `apn/http-api-auth-boundary` adds bearer authentication to HTTP API
-GET/POST routes, a GET-only read token, minimum token validation, and a
+GET/POST routes, a GET-only read token, minimum token-length validation
+  (operators must still generate high-entropy random values), and a
 startup refusal for every non-loopback bind because the stdlib server is
 plain HTTP. Loopback without configured tokens remains compatible for local
 development; remote access requires an encrypted TLS/private-network proxy.
