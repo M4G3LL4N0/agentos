@@ -3,7 +3,7 @@
 Chronological record of what was actually built and run. Aspirational
 entries are not permitted here.
 
-## 2026-11-25 — Round 13 HTTP API auth proposal (branch-only; pending CI)
+## 2026-11-25 — Round 13 HTTP API auth proposal (branch-only; CI passed)
 
 - Branch `apn/http-api-auth-boundary` adds HTTP bearer authentication for
   GET/POST routes, optional GET-only read token, constant-time token compare,
