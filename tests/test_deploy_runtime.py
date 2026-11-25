@@ -56,11 +56,11 @@ class DeploymentRuntimeTests(unittest.TestCase):
 
     def test_living_docs_distinguish_merged_code_from_undone_live_deployment(self):
         self.assertIn("Round 15/16", CURRENT_STATE)
-        self.assertIn("has not been deployed to Core 01", CURRENT_STATE)
+        self.assertIn("has not been released or deployed to Core 01", CURRENT_STATE)
         self.assertIn("not installed or live-verified", BUILD_MAP)
         self.assertIn("APN operating score remains 1.3/5", EXECUTION_LOG)
-        self.assertIn("implementation is merged to main", SECURITY)
-        self.assertIn("has not been released or\n  deployed", SECURITY)
+        self.assertIn("Authenticated HTTP API code is merged to main", SECURITY)
+        self.assertIn("has not been released or deployed", SECURITY)
         self.assertIn("implementation is merged to main", SECURITY)
         self.assertNotIn("This proposal is not merged or deployed", SECURITY)
 
