@@ -1,7 +1,7 @@
 # AgentOS Build Map
 
 Living document — evolves with discoveries during implementation.
-Updated 2026-09-24 (v0.5.0 learning execution lifecycle + low-usage efficiency
+Updated 2026-11-25 (AgentOS v0.5.0 release gate PASS; APN contract and API auth merged; Core deployment kit prepared but not installed).
 kernel, 710 tests; local release gate PASS; publication preparation in progress).
 
 ## COMPLETE
@@ -225,14 +225,22 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
 6. **Approvals UX + sandboxing** — human gate for destructive/production
    classes beyond CLI grant; path/network sandbox for shell.
 
-## HTTP API authentication proposal (Round 13, branch-only)
+## APN integration and deployment (Round 15/16)
 
-- [x] Add bearer-token gate for HTTP GET/POST routes and optional read-only token; reject weak tokens.
-- [x] Refuse all non-loopback binds on the plaintext stdlib server; remote access must use an encrypted proxy.
-- [x] Add focused API authentication and bind-policy tests.
-- [x] Run repository CI on Python 3.11 and 3.12; both test jobs and secret scan pass.
-- [ ] Obtain independent security review; merge only after review and CI.
-- Scope limit: shared bearer tokens are not per-user authorization and do not encrypt transport. The released main branch remains unauthenticated and loopback-only; do not expose it remotely.
+- [x] APN fleet contract merged through PR #4.
+- [x] Authenticated loopback HTTP API merged through PR #5; updated-head Python
+  3.11/3.12 CI and secret scan passed.
+- [x] Prepare systemd unit, private token generator, fixed-loopback health
+  check, Core runbook, and focused deployment tests.
+- [ ] Independent security review and post-merge CI confirmation.
+- [ ] Install and live-verify on Core 01 with an authorized operator.
+- [ ] Prove Core lease → Forge worker → independent verifier → Storage receipt
+  → Core reconciliation → Telegram receipt, including failure/recovery.
+- Scope: shared bearer tokens do not provide user identity or route-level
+  data scope. Released v0.5.0 remains unauthenticated. Main refuses plaintext
+  non-loopback binds; remote access requires reviewed encrypted transport.
+  The deployment kit is not installed or live-verified.
+
 
 ## BLOCKED
 
