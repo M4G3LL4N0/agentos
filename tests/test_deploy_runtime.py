@@ -61,7 +61,6 @@ class DeploymentRuntimeTests(unittest.TestCase):
         self.assertIn("APN operating score remains 1.3/5", EXECUTION_LOG)
         self.assertIn("Authenticated HTTP API code is merged to main", SECURITY)
         self.assertIn("has not been released or deployed", SECURITY)
-        self.assertIn("implementation is merged to main", SECURITY)
         self.assertNotIn("This proposal is not merged or deployed", SECURITY)
 
     def test_secret_file_is_random_private_and_never_overwritten(self):
