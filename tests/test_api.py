@@ -119,9 +119,23 @@ class APITestCase(unittest.TestCase):
             thread.join(timeout=5)
             server.server_close()
 
-    def test_remote_api_bind_requires_strong_write_token(self) -> None:
-        with self.assertRaisesRegex(ValueError, "AGENTOS_API_TOKEN"):
+    def test_api_refuses_non_loopback_binds_and_validates_tokens(self) -> None:
+        with self.assertRaisesRegex(ValueError, "only supports loopback"):
             create_server(self.app, host="0.0.0.0", port=0)
+        with self.assertRaisesRegex(ValueError, "only supports loopback"):
+            create_server(
+                self.app,
+                host="0.0.0.0",
+                port=0,
+                auth_token="w" * 40,
+            )
+        with self.assertRaisesRegex(ValueError, "only supports loopback"):
+            create_server(
+                self.app,
+                host="localhost",
+                port=0,
+                auth_token="w" * 40,
+            )
         with self.assertRaisesRegex(ValueError, "at least 32"):
             create_server(
                 self.app,
