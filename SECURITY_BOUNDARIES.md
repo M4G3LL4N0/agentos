@@ -49,16 +49,15 @@ evidenced approval.
 ## Operational caveats (unchanged from Part A)
 
 - Released v0.5.0: HTTP API, MCP, and A2A are **unauthenticated**; keep
-  them on loopback. Branch `apn/http-api-auth-boundary` proposes HTTP bearer
-  authentication: a main token for all routes and an optional read-only
-  token for GET routes. Because the stdlib server is plaintext HTTP, it
-  refuses non-loopback binds even when a token is configured. Remote access
-  must use a TLS or encrypted private-network proxy that forwards to the
-  loopback listener. This proposal is not merged or deployed. It does not
-  add user identity or scoped authorization. Generate credentials from
-  cryptographically secure randomness (for example, Python
-  `secrets.token_urlsafe(32)`); minimum-length validation cannot establish
-  entropy. MCP/A2A remain loopback-only.
+  them on loopback. Authenticated HTTP API code is merged to main (PR #5) but
+  has not been released or deployed. It accepts a main bearer token and an
+  optional GET-only token. The plaintext stdlib server refuses non-loopback
+  binds. Remote access requires a separately reviewed TLS or encrypted
+  private-network proxy that forwards to the loopback listener. The read-only
+  token can access every existing GET route; it provides no per-route scope,
+  identity, or data redaction. Do not share it with Vercel or Telegram. The
+  Core kit can generate 256-bit tokens in a mode-0600 file, but is not
+  installed. MCP/A2A remain loopback-only.
 - The repo keeps secrets out by guardrail (patterns), not by secret
   storage; do not put real keys in job params or logs.
 ## Fabric trust update (IMPLEMENTED, 2026-09-22)
