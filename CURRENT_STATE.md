@@ -303,7 +303,7 @@ invocations anywhere in Part A.
 
 - MCP *client* adapter (calling external MCP servers), OrgOS consumption
   (API/MCP/CLI surface ready), schema migrations, execution sandboxing,
-  API auth (currently loopback-only, unauthenticated).
+  API auth is merged to main with shared bearer tokens; the HTTP server remains loopback-only pending verified encrypted proxy deployment.
 
 ## FUTURE
 
