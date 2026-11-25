@@ -227,9 +227,10 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
 
 ## HTTP API authentication proposal (Round 13, branch-only)
 
-- [x] Add bearer-token gate for HTTP GET/POST routes; optional read-only token; reject weak tokens; require a write token for non-loopback binds.
+- [x] Add bearer-token gate for HTTP GET/POST routes and optional read-only token; reject weak tokens.
+- [x] Refuse all non-loopback binds on the plaintext stdlib server; remote access must use an encrypted proxy.
 - [x] Add focused API authentication and bind-policy tests.
-- [ ] Run repository CI on Python 3.11 and 3.12 and resolve failures.
+- [x] Run repository CI on Python 3.11 and 3.12; both test jobs and secret scan pass.
 - [ ] Obtain independent security review; merge only after review and CI.
 - Scope limit: shared bearer tokens are not per-user authorization and do not encrypt transport. The released main branch remains unauthenticated and loopback-only; do not expose it remotely.
 
