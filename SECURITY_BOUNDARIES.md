@@ -51,10 +51,11 @@ evidenced approval.
 - Released v0.5.0: HTTP API, MCP, and A2A are **unauthenticated**; keep
   them on loopback. Branch `apn/http-api-auth-boundary` proposes HTTP bearer
   authentication: a main token for all routes and an optional read-only
-  token for GET routes. Non-loopback HTTP binds require the main token.
-  This proposal is not merged or deployed. It does not add user identity,
-  scoped authorization, or TLS; remote use still needs encrypted private
-  transport. MCP/A2A remain loopback-only.
+  token for GET routes. Because the stdlib server is plaintext HTTP, it
+  refuses non-loopback binds even when a token is configured. Remote access
+  must use a TLS or encrypted private-network proxy that forwards to the
+  loopback listener. This proposal is not merged or deployed. It does not
+  add user identity or scoped authorization. MCP/A2A remain loopback-only.
 - The repo keeps secrets out by guardrail (patterns), not by secret
   storage; do not put real keys in job params or logs.
 ## Fabric trust update (IMPLEMENTED, 2026-09-22)
