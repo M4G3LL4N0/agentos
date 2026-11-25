@@ -7,10 +7,11 @@ If this file and behaviour disagree, behaviour wins; fix this file.
 
 Branch `apn/http-api-auth-boundary` adds bearer authentication to HTTP API
 GET/POST routes, a GET-only read token, minimum token validation, and a
-startup refusal when a non-loopback bind lacks a write token. Loopback
-without configured tokens remains compatible for local development. Tests
-were added, but this proposal is not merged or deployed and its CI result is
-pending. Remote operation still requires encrypted private transport; this
+startup refusal for every non-loopback bind because the stdlib server is
+plain HTTP. Loopback without configured tokens remains compatible for local
+development; remote access requires an encrypted TLS/private-network proxy.
+Tests were added, but this proposal is not merged or deployed. GitHub Actions
+passed on Python 3.11 and 3.12, including the secret scan. This
 shared-token boundary does not provide individual identity or scoped
 authorization. The released v0.5.0 main branch remains unauthenticated and
 must stay loopback-only. No Core/Forge/Storage runtime or Telegram setup was
