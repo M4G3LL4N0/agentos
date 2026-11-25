@@ -3,7 +3,7 @@
 Same service methods as the CLI — no duplicated business logic. Small,
 stable surface: health, status, capabilities, objectives, executions
 (via inspect), events, run, verify, recover, delegate. Binds loopback by
-default; remote binds require bearer authentication. Read tokens can access GET routes only.
+default; the plain-HTTP server refuses non-loopback binds. Remote access requires a TLS/private-network proxy. Read tokens can access GET routes only.
 """
 
 from __future__ import annotations
