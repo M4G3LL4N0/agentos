@@ -55,7 +55,10 @@ evidenced approval.
   refuses non-loopback binds even when a token is configured. Remote access
   must use a TLS or encrypted private-network proxy that forwards to the
   loopback listener. This proposal is not merged or deployed. It does not
-  add user identity or scoped authorization. MCP/A2A remain loopback-only.
+  add user identity or scoped authorization. Generate credentials from
+  cryptographically secure randomness (for example, Python
+  `secrets.token_urlsafe(32)`); minimum-length validation cannot establish
+  entropy. MCP/A2A remain loopback-only.
 - The repo keeps secrets out by guardrail (patterns), not by secret
   storage; do not put real keys in job params or logs.
 ## Fabric trust update (IMPLEMENTED, 2026-09-22)
