@@ -3,7 +3,24 @@
 Chronological record of what was actually built and run. Aspirational
 entries are not permitted here.
 
-## 2026-11-25 — Round 13 HTTP API auth proposal (branch-only; CI passed)
+## 2026-11-25 — Round 15/16 APN integration and deployment kit
+
+- PR #4 merged the APN fleet contract (commit
+  `16a41d76654253b23adbf351148d5f18f9ad43a3`); PR #5 merged bearer
+  authentication and the plaintext loopback bind guard (commit
+  `bdd960cb17249c364225394ceff7d4ce7eed71f2`). Updated-head CI passed on
+  Python 3.11/3.12 and secret scan before PR #5 merged.
+- Added a Core systemd template, mode-0600 token-file generator, fixed-loopback
+  authenticated health check, runbook, and targeted deployment tests.
+- Local evidence: 6 focused tests pass, scripts compile, and
+  `systemd-analyze verify` passes with the release executable substituted
+  solely to validate unit syntax.
+- Not installed or live-verified. No server API task, Telegram delivery,
+  Storage receipt, backup restore, or production deployment was performed.
+- APN operating score remains 1.3/5.
+
+
+## 2026-11-25 — Round 13 HTTP API auth (PR #5 merged; release/deployment pending)
 
 - Branch `apn/http-api-auth-boundary` adds HTTP bearer authentication for
   GET/POST routes, optional GET-only read token, constant-time token compare,
@@ -12,9 +29,10 @@ entries are not permitted here.
   compatible; remote access requires an encrypted proxy.
 - Added API tests for read/write separation and non-loopback bind policy.
 - GitHub Actions passed on Python 3.11 and 3.12, including the secret scan.
-  Independent security review remains pending. This change is not merged or
-  deployed. No live servers, Telegram, or Vercel production deployment were
-  changed. It is not per-user authorization.
+  PR #5 is merged to main; updated-head CI passed Python 3.11/3.12 and secret
+  scan. Independent security review and release/deployment remain pending. No
+  live servers, Telegram, or Vercel production deployment changed. Shared
+  tokens are not per-user authorization.
 
 ## 2026-09-17 — Part A foundation build (v0.1.0)
 
