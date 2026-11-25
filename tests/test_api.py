@@ -31,19 +31,111 @@ class APITestCase(unittest.TestCase):
         self.app.close()
         self.tmp.cleanup()
 
-    def call(self, method: str, path: str, body: dict | None = None):
+    def call(
+        self,
+        method: str,
+        path: str,
+        body: dict | None = None,
+        *,
+        base: str | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         data = json.dumps(body or {}).encode() if body is not None else None
+        request_headers = {"Content-Type": "application/json"}
+        request_headers.update(headers or {})
         request = urllib.request.Request(
-            self.base + path,
+            (base or self.base) + path,
             data=data,
             method=method,
-            headers={"Content-Type": "application/json"},
+            headers=request_headers,
         )
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 return response.status, json.loads(response.read().decode())
         except urllib.error.HTTPError as exc:
             return exc.code, json.loads(exc.read().decode())
+
+    def test_authenticated_api_read_and_write_tokens(self) -> None:
+        import os
+        from unittest.mock import patch
+
+        write_token = "w" * 40
+        read_token = "r" * 40
+        with patch.dict(
+            os.environ,
+            {
+                "AGENTOS_API_TOKEN": write_token,
+                "AGENTOS_API_READ_TOKEN": read_token,
+            },
+        ):
+            server = create_server(self.app, host="127.0.0.1", port=0)
+        thread = threading.Thread(
+            target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True
+        )
+        thread.start()
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            status, payload = self.call("GET", "/status", base=base)
+            self.assertEqual(status, 401)
+            self.assertEqual(payload["error"], "authentication required")
+
+            status, payload = self.call(
+                "GET",
+                "/status",
+                base=base,
+                headers={"Authorization": f"Bearer {read_token}"},
+            )
+            self.assertEqual(status, 200)
+            self.assertIn("counts", payload)
+
+            status, _ = self.call(
+                "POST",
+                "/objectives",
+                {"title": "must stay blocked"},
+                base=base,
+                headers={"Authorization": f"Bearer {read_token}"},
+            )
+            self.assertEqual(status, 401)
+            status, listed = self.call(
+                "GET",
+                "/objectives",
+                base=base,
+                headers={"Authorization": f"Bearer {read_token}"},
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(listed["objectives"], [])
+
+            status, created = self.call(
+                "POST",
+                "/objectives",
+                {"title": "authorized write", "operation": "echo"},
+                base=base,
+                headers={"Authorization": f"Bearer {write_token}"},
+            )
+            self.assertEqual(status, 201)
+            self.assertEqual(created["objective"]["title"], "authorized write")
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
+            server.server_close()
+
+    def test_remote_api_bind_requires_strong_write_token(self) -> None:
+        with self.assertRaisesRegex(ValueError, "AGENTOS_API_TOKEN"):
+            create_server(self.app, host="0.0.0.0", port=0)
+        with self.assertRaisesRegex(ValueError, "at least 32"):
+            create_server(
+                self.app,
+                host="127.0.0.1",
+                port=0,
+                auth_token="too-short",
+            )
+        with self.assertRaisesRegex(ValueError, "required when a read-only token"):
+            create_server(
+                self.app,
+                host="127.0.0.1",
+                port=0,
+                read_token="r" * 40,
+            )
 
     def test_health_and_status(self) -> None:
         status, payload = self.call("GET", "/health")
