@@ -3,6 +3,19 @@
 Chronological record of what was actually built and run. Aspirational
 entries are not permitted here.
 
+## 2026-11-25 — Round 13 HTTP API auth proposal (branch-only; CI passed)
+
+- Branch `apn/http-api-auth-boundary` adds HTTP bearer authentication for
+  GET/POST routes, optional GET-only read token, constant-time token compare,
+  token-strength checks, and refusal of every non-loopback bind because the
+  server is plaintext HTTP. Unauthenticated loopback development remains
+  compatible; remote access requires an encrypted proxy.
+- Added API tests for read/write separation and non-loopback bind policy.
+- GitHub Actions passed on Python 3.11 and 3.12, including the secret scan.
+  Independent security review remains pending. This change is not merged or
+  deployed. No live servers, Telegram, or Vercel production deployment were
+  changed. It is not per-user authorization.
+
 ## 2026-09-17 — Part A foundation build (v0.1.0)
 
 - Scaffolded the AgentOS project from zero (nothing existed).

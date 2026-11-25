@@ -3,13 +3,16 @@
 Same service methods as the CLI — no duplicated business logic. Small,
 stable surface: health, status, capabilities, objectives, executions
 (via inspect), events, run, verify, recover, delegate. Binds loopback by
-default; no auth in v1 (documented limitation).
+default; the plain-HTTP server refuses non-loopback binds. Remote access requires a TLS/private-network proxy. Read tokens can access GET routes only.
 """
 
 from __future__ import annotations
 
+import ipaddress
 import json
+import os
 import re
+import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -55,6 +58,9 @@ class AgentOSHandler(BaseHTTPRequestHandler):
         body = json.dumps(payload, default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        if status == 401:
+            self.send_header("WWW-Authenticate", 'Bearer realm="AgentOS API"')
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -63,8 +69,25 @@ class AgentOSHandler(BaseHTTPRequestHandler):
     def app(self) -> AgentOS:
         return self.server.app  # type: ignore[attr-defined]
 
+    def _authorize(self, *, read_only: bool) -> None:
+        token = getattr(self.server, "auth_token", None)
+        if token is None:
+            return
+        presented = self.headers.get("Authorization", "")
+        scheme, separator, credential = presented.partition(" ")
+        accepted = [token]
+        if read_only:
+            read_token = getattr(self.server, "read_token", None)
+            if read_token is not None:
+                accepted.append(read_token)
+        if not separator or scheme.lower() != "bearer" or not credential:
+            raise APIError(401, "authentication required")
+        if not any(secrets.compare_digest(credential, value) for value in accepted):
+            raise APIError(401, "authentication required")
+
     def do_GET(self) -> None:
         try:
+            self._authorize(read_only=True)
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             payload = self._route_get(parsed.path, query)
@@ -78,6 +101,7 @@ class AgentOSHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
+            self._authorize(read_only=False)
             parsed = urlparse(self.path)
             body = _read_json(self)
             payload, status = self._route_post(parsed.path, body)
@@ -204,8 +228,55 @@ class AgentOSHandler(BaseHTTPRequestHandler):
         raise APIError(404, f"unknown route {path!r}")
 
 
-def create_server(app: AgentOS, host: str = "127.0.0.1", port: int = 0) -> ThreadingHTTPServer:
+def _is_loopback_host(host: str) -> bool:
+    try:
+        address = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        return False
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped:
+        return address.ipv4_mapped.is_loopback
+    return address.is_loopback
+
+
+def _validate_api_token(token: str | None, name: str) -> None:
+    if token is None:
+        return
+    if len(token) < 32 or not token or any(character.isspace() for character in token):
+        raise ValueError(f"{name} must be at least 32 non-whitespace characters")
+
+
+def create_server(
+    app: AgentOS,
+    host: str = "127.0.0.1",
+    port: int = 0,
+    *,
+    auth_token: str | None = None,
+    read_token: str | None = None,
+) -> ThreadingHTTPServer:
+    """Create the API server with optional bearer authentication.
+
+    Tokens default to AGENTOS_API_TOKEN and AGENTOS_API_READ_TOKEN. A read
+    token authorizes GET routes only; the main token authorizes all routes.
+    This stdlib server is plain HTTP and refuses non-loopback binds. For
+    remote access, put it behind an encrypted private transport (for example,
+    a private mesh or TLS proxy) and keep this server bound to loopback.
+    """
+    if auth_token is None:
+        auth_token = os.environ.get("AGENTOS_API_TOKEN") or None
+    if read_token is None:
+        read_token = os.environ.get("AGENTOS_API_READ_TOKEN") or None
+    _validate_api_token(auth_token, "AGENTOS_API_TOKEN")
+    _validate_api_token(read_token, "AGENTOS_API_READ_TOKEN")
+    if read_token is not None and auth_token is None:
+        raise ValueError("AGENTOS_API_TOKEN is required when a read-only token is configured")
+    if not _is_loopback_host(host):
+        raise ValueError(
+            "AgentOS HTTP API only supports loopback binds; use a TLS/private-network proxy for remote access"
+        )
+
     server = ThreadingHTTPServer((host, port), AgentOSHandler)
     server.app = app  # type: ignore[attr-defined]
+    server.auth_token = auth_token  # type: ignore[attr-defined]
+    server.read_token = read_token  # type: ignore[attr-defined]
     server.daemon_threads = True
     return server

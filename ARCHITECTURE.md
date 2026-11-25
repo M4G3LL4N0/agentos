@@ -8,8 +8,13 @@ Lightweight Python processes (stdlib only, no runtime dependencies).
 State lives in one embedded sqlite database (`$AGENTOS_HOME/agentos.db`,
 default `~/.agentos/`), accessed via per-thread connections (WAL) so the
 API server and parallel plan execution are safe. Interfaces: CLI, HTTP API
-(`agentos serve`, loopback, no auth in v1), MCP stdio (`agentos mcp`) —
-all three call the same `services.AgentOS` core. No containers, no cloud.
+(`agentos serve`), MCP stdio (`agentos mcp`) — all three call the same
+`services.AgentOS` core. The released v0.5.0 API is loopback-only and
+unauthenticated. Branch `apn/http-api-auth-boundary` proposes bearer tokens
+for HTTP routes while refusing non-loopback binds on the plaintext server;
+remote access must use an encrypted TLS/private-network proxy. This is not
+merged or deployed. MCP/A2A transport security is unchanged. No
+containers, no cloud.
 
 ```
 Interface Layer      CLI (argparse)  ·  HTTP API (api.py)  ·  MCP stdio (mcp_server.py)

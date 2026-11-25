@@ -3,6 +3,21 @@
 Living document — reflects reality as of 2026-09-25 (v0.5.0 release gate PASS; 710 tests green; public remote and CI verified).
 If this file and behaviour disagree, behaviour wins; fix this file.
 
+## Round 13 — HTTP API authentication boundary proposal (branch-only, not deployed)
+
+Branch `apn/http-api-auth-boundary` adds bearer authentication to HTTP API
+GET/POST routes, a GET-only read token, minimum token-length validation
+  (operators must still generate high-entropy random values), and a
+startup refusal for every non-loopback bind because the stdlib server is
+plain HTTP. Loopback without configured tokens remains compatible for local
+development; remote access requires an encrypted TLS/private-network proxy.
+Tests were added, but this proposal is not merged or deployed. GitHub Actions
+passed on Python 3.11 and 3.12, including the secret scan. This
+shared-token boundary does not provide individual identity or scoped
+authorization. The released v0.5.0 main branch remains unauthenticated and
+must stay loopback-only. No Core/Forge/Storage runtime or Telegram setup was
+changed by this proposal.
+
 ## Status: genuinely useful universal Agent Engine (local)
 
 `agentos` installs (`pip install -e .`) and works through **CLI, HTTP API
@@ -292,7 +307,7 @@ federation economics/negotiation across remote cells.
 
 - Heuristic operation resolution without explicit operation (safe default).
 - Quality evaluator is heuristic (no model judge wired; evaluator slot exists).
-- Backoff computed, not slept. API has no auth — bind loopback, trusted networks only.
+- Backoff computed, not slept. Released main HTTP API has no auth; bind loopback. The unmerged branch proposal adds shared bearer tokens but not identity/scoped authorization or transport encryption.
 - No live model calls were made during verification (cost/latency unmeasured).
 - Learned routing returns no executor when no measured candidate profile exists; the hard-gated router remains authoritative rather than inventing a score.
 

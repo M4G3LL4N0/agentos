@@ -225,6 +225,15 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
 6. **Approvals UX + sandboxing** — human gate for destructive/production
    classes beyond CLI grant; path/network sandbox for shell.
 
+## HTTP API authentication proposal (Round 13, branch-only)
+
+- [x] Add bearer-token gate for HTTP GET/POST routes and optional read-only token; reject weak tokens.
+- [x] Refuse all non-loopback binds on the plaintext stdlib server; remote access must use an encrypted proxy.
+- [x] Add focused API authentication and bind-policy tests.
+- [x] Run repository CI on Python 3.11 and 3.12; both test jobs and secret scan pass.
+- [ ] Obtain independent security review; merge only after review and CI.
+- Scope limit: shared bearer tokens are not per-user authorization and do not encrypt transport. The released main branch remains unauthenticated and loopback-only; do not expose it remotely.
+
 ## BLOCKED
 
 - xai live use: needs `XAI_API_KEY` (not present; adapter ready).
@@ -233,7 +242,7 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
 
 ## FUTURE (reserved, not started)
 
-- Schema migrations, event search/streaming, API auth/multi-user.
+- Schema migrations, event search/streaming, per-identity API authorization/multi-user.
 - Additional adapters: browser, computer, external APIs, GitHub write
   (behind approvals + policy design first).
 - Model-based quality judge (evaluator slot exists).
