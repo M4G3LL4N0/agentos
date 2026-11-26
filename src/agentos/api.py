@@ -106,6 +106,11 @@ class AgentOSHandler(BaseHTTPRequestHandler):
         try:
             parsed = urlparse(self.path)
             self._authorize(read_only=False, path=parsed.path)
+            if getattr(self.server, "control_only", False) and not (
+                parsed.path == "/objectives"
+                or re.fullmatch(r"/objectives/[^/]+/cancel", parsed.path)
+            ):
+                raise APIError(403, "task execution endpoints are disabled in control-only mode")
             body = _read_json(self)
             payload, status = self._route_post(parsed.path, body)
             self._send(status, {"ok": True, **payload})
@@ -256,12 +261,15 @@ def create_server(
     auth_token: str | None = None,
     read_token: str | None = None,
     health_token: str | None = None,
+    control_only: bool | None = None,
 ) -> ThreadingHTTPServer:
     """Create the API server with optional bearer authentication.
 
     Tokens default to AGENTOS_API_TOKEN, AGENTOS_API_READ_TOKEN, and
     AGENTOS_API_HEALTH_TOKEN. The health token authorizes only GET /health;
     the read token authorizes all GET routes; the main token authorizes all routes.
+    Control-only mode accepts objective intake/cancellation but blocks run,
+    delegate, verification, and recovery routes. It defaults from AGENTOS_CONTROL_ONLY.
     This stdlib server is plain HTTP and refuses non-loopback binds. For
     remote access, put it behind an encrypted private transport (for example,
     a private mesh or TLS proxy) and keep this server bound to loopback.
@@ -272,6 +280,11 @@ def create_server(
         read_token = os.environ.get("AGENTOS_API_READ_TOKEN") or None
     if health_token is None:
         health_token = os.environ.get("AGENTOS_API_HEALTH_TOKEN") or None
+    if control_only is None:
+        control_value = os.environ.get("AGENTOS_CONTROL_ONLY", "0").strip().lower()
+        if control_value not in {"0", "1", "false", "true", "no", "yes"}:
+            raise ValueError("AGENTOS_CONTROL_ONLY must be a boolean value")
+        control_only = control_value in {"1", "true", "yes"}
     _validate_api_token(auth_token, "AGENTOS_API_TOKEN")
     _validate_api_token(read_token, "AGENTOS_API_READ_TOKEN")
     _validate_api_token(health_token, "AGENTOS_API_HEALTH_TOKEN")
@@ -289,5 +302,6 @@ def create_server(
     server.auth_token = auth_token  # type: ignore[attr-defined]
     server.read_token = read_token  # type: ignore[attr-defined]
     server.health_token = health_token  # type: ignore[attr-defined]
+    server.control_only = control_only  # type: ignore[attr-defined]
     server.daemon_threads = True
     return server
