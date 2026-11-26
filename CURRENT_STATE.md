@@ -1,22 +1,45 @@
 # AgentOS Current State
 
-Living document — reflects reality as of 2026-09-25 (v0.5.0 release gate PASS; 710 tests green; public remote and CI verified).
+Living document — reflects reality as of 2026-11-25 (v0.5.0 release gate PASS; APN integration merged; Core deployment pending).
 If this file and behaviour disagree, behaviour wins; fix this file.
 
-## Round 13 — HTTP API authentication boundary proposal (branch-only, not deployed)
+## Round 15/16 — APN integration and deployment status
 
-Branch `apn/http-api-auth-boundary` adds bearer authentication to HTTP API
-GET/POST routes, a GET-only read token, minimum token-length validation
-  (operators must still generate high-entropy random values), and a
-startup refusal for every non-loopback bind because the stdlib server is
-plain HTTP. Loopback without configured tokens remains compatible for local
-development; remote access requires an encrypted TLS/private-network proxy.
-Tests were added, but this proposal is not merged or deployed. GitHub Actions
-passed on Python 3.11 and 3.12, including the secret scan. This
-shared-token boundary does not provide individual identity or scoped
-authorization. The released v0.5.0 main branch remains unauthenticated and
-must stay loopback-only. No Core/Forge/Storage runtime or Telegram setup was
-changed by this proposal.
+The APN fleet contract is integrated through PR #4 (merge commit
+`16a41d76654253b23adbf351148d5f18f9ad43a3`). HTTP API bearer
+authentication is integrated through PR #5 (commit
+`bdd960cb17249c364225394ceff7d4ce7eed71f2`). Updated PR #5 head passed
+GitHub Actions on Python 3.11 and 3.12 plus the secret scan before merge.
+
+Main supports a main bearer token and an optional GET-only token, but shared
+tokens do not provide individual identity or route-level data scope. The read
+token can access all existing GET routes; do not share it with Vercel or
+Telegram. The released v0.5.0 tag remains unauthenticated. Main refuses
+non-loopback HTTP binds, so remote access requires a separately reviewed
+encrypted proxy. The merged code has not been released or deployed to Core 01.
+
+Round 16 PR #6 adds a systemd unit, per-release virtual environment, private
+credential-file generator, health-only API token, service-active preflight,
+fixed-loopback health check, Core runbook, and focused tests. Independent
+review found and prompted fixes for a stale source pin and a main-token leak
+to a rogue local listener. The PR now installs only from an exact reviewed
+main commit containing the kit; the checker uses only a `/health`-scoped
+token and refuses to read it unless systemd reports the service active. These
+changes are still draft-only and have not been installed or live-verified.
+The actual `/health` response wraps the route payload as `ok: true` and
+`healthy: true`; the checker validates both. No Core, Forge, Storage, Telegram,
+firewall, or private-network runtime was changed. The APN operating score
+remains 1.3/5 until authenticated live task execution, verification, archival
+receipt, Core reconciliation, Telegram delivery, and recovery are evidenced.
+
+Round 18 adds an explicit control-only mode to the draft: the systemd unit sets
+`AGENTOS_CONTROL_ONLY=1`; objective intake/cancellation remain available, while
+delegate/run/verify/recover routes return HTTP 403. The API regression test
+submits a shell objective and confirms no marker command ran. This is a bounded
+containment mode, not worker isolation: same-UID `/proc` access remains a latent
+risk if any task-execution path is enabled. The Core-to-Forge lease/result path
+is still absent. PR #6 remains draft; new-head CI is pending; nothing is installed.
+
 
 ## Status: genuinely useful universal Agent Engine (local)
 
@@ -294,7 +317,7 @@ invocations anywhere in Part A.
 
 - MCP *client* adapter (calling external MCP servers), OrgOS consumption
   (API/MCP/CLI surface ready), schema migrations, execution sandboxing,
-  API auth (currently loopback-only, unauthenticated).
+  API auth is merged to main with shared bearer tokens; the HTTP server remains loopback-only pending verified encrypted proxy deployment.
 
 ## FUTURE
 
@@ -307,7 +330,7 @@ federation economics/negotiation across remote cells.
 
 - Heuristic operation resolution without explicit operation (safe default).
 - Quality evaluator is heuristic (no model judge wired; evaluator slot exists).
-- Backoff computed, not slept. Released main HTTP API has no auth; bind loopback. The unmerged branch proposal adds shared bearer tokens but not identity/scoped authorization or transport encryption.
+- Backoff computed, not slept. Released v0.5.0 API is unauthenticated and must stay on loopback. Main has shared bearer auth but no per-user or route-level scope, and remains loopback-only pending verified encrypted proxy deployment.
 - No live model calls were made during verification (cost/latency unmeasured).
 - Learned routing returns no executor when no measured candidate profile exists; the hard-gated router remains authoritative rather than inventing a score.
 

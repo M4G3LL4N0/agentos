@@ -49,16 +49,16 @@ evidenced approval.
 ## Operational caveats (unchanged from Part A)
 
 - Released v0.5.0: HTTP API, MCP, and A2A are **unauthenticated**; keep
-  them on loopback. Branch `apn/http-api-auth-boundary` proposes HTTP bearer
-  authentication: a main token for all routes and an optional read-only
-  token for GET routes. Because the stdlib server is plaintext HTTP, it
-  refuses non-loopback binds even when a token is configured. Remote access
-  must use a TLS or encrypted private-network proxy that forwards to the
-  loopback listener. This proposal is not merged or deployed. It does not
-  add user identity or scoped authorization. Generate credentials from
-  cryptographically secure randomness (for example, Python
-  `secrets.token_urlsafe(32)`); minimum-length validation cannot establish
-  entropy. MCP/A2A remain loopback-only.
+  them on loopback. Authenticated HTTP API code is merged to main (PR #5) but
+  has not been released or deployed. It accepts a main bearer token and an
+  optional GET-only token. Draft PR #6 adds a third token authorized only for
+  GET /health; it is not in main and must not be treated as deployed. The
+  plaintext stdlib server refuses non-loopback binds. Remote access requires
+  a separately reviewed TLS or encrypted private-network proxy. The existing
+  read-only token still covers every GET route; do not share it with Vercel or
+  Telegram. The health checker sends only the health-scoped token, and only
+  after confirming the systemd service is active. The kit is not installed.
+  MCP/A2A remain loopback-only.
 - The repo keeps secrets out by guardrail (patterns), not by secret
   storage; do not put real keys in job params or logs.
 ## Fabric trust update (IMPLEMENTED, 2026-09-22)
@@ -71,3 +71,8 @@ evidenced approval.
 - Cell configs with credential-looking values are rejected, never stored.
 - MCP approval registers unavailable metadata (transport DEFERRED), never
   a live executor. No secrets in JobEnvelope (rejected at ingest).
+
+
+## Round 18 — Core API control-only deployment gate (draft)
+
+The proposed systemd service sets `AGENTOS_CONTROL_ONLY=1`. In this mode the API can accept/cancel objectives but blocks `/delegate`, `/run`, `/verify`, and `/recover` with HTTP 403. This prevents API clients from launching task-controlled shell commands in the same-UID process that holds API credentials. Child environment filtering does not block `/proc/<parent-pid>/environ`; the leak remains a latent risk if a task-execution endpoint is enabled or the flag is removed. This is containment, not a separate worker identity or Core-to-Forge lease path. Keep the PR in draft and do not enable execution until a separately restricted worker/typed interface is implemented and reviewed. No deployment is claimed.

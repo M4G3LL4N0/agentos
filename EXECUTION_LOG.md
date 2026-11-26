@@ -3,7 +3,48 @@
 Chronological record of what was actually built and run. Aspirational
 entries are not permitted here.
 
-## 2026-11-25 — Round 13 HTTP API auth proposal (branch-only; CI passed)
+## 2026-11-26 — Round 18 control-only API containment (PR #6 draft)
+
+- Added an opt-in control-only HTTP API mode. It accepts objective creation and
+  cancellation but rejects delegate/run/verify/recover with HTTP 403.
+- Added an API integration test that creates a shell objective, attempts all
+  blocked execution routes, checks a marker command never ran, and then cancels
+  the objective.
+- Set `AGENTOS_CONTROL_ONLY=1` in the Core systemd unit and added a unit test
+  requiring the flag. The runbook now states the boundary and residual risk.
+- Verification: pending updated-head GitHub Actions and independent security
+  review. No CI pass is claimed yet.
+- Not installed or live-verified. No Core, Forge, Storage, Telegram, firewall,
+  or production Vercel state changed. The Core-to-Forge lease/result path is
+  still not implemented; the API/task execution process split remains required
+  before any execution endpoint can be enabled.
+- APN operating score remains 1.3/5.
+
+## 2026-11-25 — Round 15/16 APN integration and deployment kit
+
+- PR #4 merged the APN fleet contract (commit
+  `16a41d76654253b23adbf351148d5f18f9ad43a3`); PR #5 merged bearer
+  authentication and the plaintext loopback bind guard (commit
+  `bdd960cb17249c364225394ceff7d4ce7eed71f2`). Updated-head CI passed on
+  Python 3.11/3.12 and secret scan before PR #5 merged.
+- Added a Core systemd template with a per-release virtual environment,
+  mode-0600 generator for main/read/health-only tokens, systemd-active
+  preflight, fixed-loopback health check, runbook, and focused tests.
+- Independent reviewers found two issues before draft advancement: kit paths
+  were absent from the pinned base SHA, and the checker sent the write-capable
+  main token to localhost. The runbook now requires a reviewed post-merge
+  exact SHA; the checker sends only a GET /health-scoped token after systemd
+  reports the service active. The API response is wrapped as `ok: true` and
+  `healthy: true`, and both are checked.
+- Local evidence: 8 focused tests pass, scripts compile, and
+  `systemd-analyze verify` passes using a harmless executable substitution
+  for syntax checking. Updated-head CI and independent re-review are pending.
+- Not installed or live-verified. No server API task, Telegram delivery,
+  Storage receipt, backup restore, or production deployment was performed.
+- APN operating score remains 1.3/5.
+
+
+## 2026-11-25 — Round 13 HTTP API auth (PR #5 merged; release/deployment pending)
 
 - Branch `apn/http-api-auth-boundary` adds HTTP bearer authentication for
   GET/POST routes, optional GET-only read token, constant-time token compare,
@@ -12,9 +53,10 @@ entries are not permitted here.
   compatible; remote access requires an encrypted proxy.
 - Added API tests for read/write separation and non-loopback bind policy.
 - GitHub Actions passed on Python 3.11 and 3.12, including the secret scan.
-  Independent security review remains pending. This change is not merged or
-  deployed. No live servers, Telegram, or Vercel production deployment were
-  changed. It is not per-user authorization.
+  PR #5 is merged to main; updated-head CI passed Python 3.11/3.12 and secret
+  scan. Independent security review and release/deployment remain pending. No
+  live servers, Telegram, or Vercel production deployment changed. Shared
+  tokens are not per-user authorization.
 
 ## 2026-09-17 — Part A foundation build (v0.1.0)
 

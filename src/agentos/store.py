@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -552,6 +553,22 @@ CREATE TABLE IF NOT EXISTS persistence_decisions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_persistence_decisions_role ON persistence_decisions(role_id);
+
+CREATE TABLE IF NOT EXISTS task_leases (
+    lease_id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    worker_identity TEXT NOT NULL,
+    request_key TEXT NOT NULL,
+    fencing_epoch INTEGER NOT NULL CHECK (fencing_epoch > 0),
+    issued_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'EXPIRED', 'CANCELLED', 'COMPLETED', 'SUPERSEDED')),
+    result_sha256 TEXT,
+    UNIQUE(task_id, request_key),
+    UNIQUE(task_id, fencing_epoch)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_leases_task_epoch ON task_leases(task_id, fencing_epoch DESC);
 """
 
 
@@ -706,6 +723,202 @@ class Store:
                 ]
                 if name not in cols:
                     raise
+
+    @staticmethod
+    def _lease_time(value: datetime | None = None) -> datetime:
+        current = value or datetime.now(timezone.utc)
+        if not isinstance(current, datetime) or current.tzinfo is None:
+            raise ValueError("lease timestamps must be timezone-aware datetime values")
+        return current.astimezone(timezone.utc)
+
+    @staticmethod
+    def _lease_dict(row: sqlite3.Row) -> dict[str, Any]:
+        return dict(row)
+
+    def get_lease(self, lease_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM task_leases WHERE lease_id = ?", (lease_id,)
+        ).fetchone()
+        return self._lease_dict(row) if row else None
+
+    def claim_lease(
+        self,
+        task_id: str,
+        worker_identity: str,
+        request_key: str,
+        ttl_seconds: int,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Atomically issue one task lease. This store method is not an API route."""
+        for label, value in (
+            ("task_id", task_id),
+            ("worker_identity", worker_identity),
+            ("request_key", request_key),
+        ):
+            if not isinstance(value, str) or not value.strip() or len(value) > 256:
+                raise ValueError(f"{label} must be a non-empty string of at most 256 characters")
+        if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int) or not 1 <= ttl_seconds <= 3600:
+            raise ValueError("ttl_seconds must be an integer from 1 through 3600")
+        issued = self._lease_time(now)
+        issued_text = issued.isoformat().replace("+00:00", "Z")
+        expires_text = (issued + timedelta(seconds=ttl_seconds)).isoformat().replace("+00:00", "Z")
+        conn = self.conn
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            prior = conn.execute(
+                "SELECT * FROM task_leases WHERE task_id = ? AND request_key = ?",
+                (task_id, request_key),
+            ).fetchone()
+            if prior:
+                if prior["worker_identity"] != worker_identity:
+                    raise ValueError("idempotency key is already bound to another worker")
+                conn.commit()
+                return self._lease_dict(prior)
+
+            active = conn.execute(
+                "SELECT * FROM task_leases WHERE task_id = ? AND status = 'ACTIVE'",
+                (task_id,),
+            ).fetchall()
+            for lease in active:
+                active_expiry = self._lease_time(datetime.fromisoformat(lease["expires_at"].replace("Z", "+00:00")))
+                if active_expiry > issued:
+                    raise ValueError("task already has an unexpired active lease")
+                conn.execute(
+                    "UPDATE task_leases SET status = 'EXPIRED' WHERE lease_id = ? AND status = 'ACTIVE'",
+                    (lease["lease_id"],),
+                )
+
+            row = conn.execute(
+                "SELECT COALESCE(MAX(fencing_epoch), 0) + 1 AS next_epoch FROM task_leases WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            epoch = int(row["next_epoch"])
+            lease_id = new_id()
+            conn.execute(
+                """
+                INSERT INTO task_leases (
+                    lease_id, task_id, worker_identity, request_key, fencing_epoch,
+                    issued_at, expires_at, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+                """,
+                (lease_id, task_id, worker_identity, request_key, epoch, issued_text, expires_text),
+            )
+            conn.commit()
+            return self._lease_dict(
+                conn.execute("SELECT * FROM task_leases WHERE lease_id = ?", (lease_id,)).fetchone()
+            )
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+
+    def commit_lease_result(
+        self,
+        lease_id: str,
+        worker_identity: str,
+        fencing_epoch: int,
+        result_sha256: str,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Accept a result only from the current, unexpired lease epoch."""
+        if not isinstance(result_sha256, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", result_sha256):
+            raise ValueError("result_sha256 must be a 64-character hexadecimal digest")
+        if isinstance(fencing_epoch, bool) or not isinstance(fencing_epoch, int) or fencing_epoch < 1:
+            raise ValueError("fencing_epoch must be a positive integer")
+        current = self._lease_time(now)
+        conn = self.conn
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = conn.execute(
+                "SELECT * FROM task_leases WHERE lease_id = ?", (lease_id,)
+            ).fetchone()
+            if not row:
+                raise ValueError("unknown lease")
+            if row["worker_identity"] != worker_identity or row["fencing_epoch"] != fencing_epoch:
+                raise ValueError("worker identity or fencing epoch does not match lease")
+            if row["status"] == "COMPLETED":
+                if row["result_sha256"] == result_sha256:
+                    conn.commit()
+                    return self._lease_dict(row)
+                raise ValueError("completed lease cannot accept a different result")
+            if row["status"] != "ACTIVE":
+                raise ValueError(f"lease is not active ({row['status']})")
+            expiry = self._lease_time(datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")))
+            if expiry <= current:
+                conn.execute(
+                    "UPDATE task_leases SET status = 'EXPIRED' WHERE lease_id = ? AND status = 'ACTIVE'",
+                    (lease_id,),
+                )
+                conn.commit()
+                raise ValueError("lease expired before result commit")
+            latest = conn.execute(
+                "SELECT MAX(fencing_epoch) AS epoch FROM task_leases WHERE task_id = ?",
+                (row["task_id"],),
+            ).fetchone()["epoch"]
+            if latest != fencing_epoch:
+                conn.execute(
+                    "UPDATE task_leases SET status = 'SUPERSEDED' WHERE lease_id = ? AND status = 'ACTIVE'",
+                    (lease_id,),
+                )
+                conn.commit()
+                raise ValueError("stale fencing epoch")
+            conn.execute(
+                """
+                UPDATE task_leases
+                SET status = 'COMPLETED', result_sha256 = ?
+                WHERE lease_id = ? AND status = 'ACTIVE' AND fencing_epoch = ?
+                """,
+                (result_sha256.lower(), lease_id, fencing_epoch),
+            )
+            conn.commit()
+            return self._lease_dict(
+                conn.execute("SELECT * FROM task_leases WHERE lease_id = ?", (lease_id,)).fetchone()
+            )
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+
+    def cancel_lease(
+        self, lease_id: str, *, now: datetime | None = None
+    ) -> dict[str, Any]:
+        """Cancel an active lease so a later worker result is rejected."""
+        current = self._lease_time(now)
+        conn = self.conn
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = conn.execute(
+                "SELECT * FROM task_leases WHERE lease_id = ?", (lease_id,)
+            ).fetchone()
+            if not row:
+                raise ValueError("unknown lease")
+            if row["status"] == "CANCELLED":
+                conn.commit()
+                return self._lease_dict(row)
+            if row["status"] != "ACTIVE":
+                raise ValueError(f"lease is not active ({row['status']})")
+            expiry = self._lease_time(datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00")))
+            if expiry <= current:
+                conn.execute(
+                    "UPDATE task_leases SET status = 'EXPIRED' WHERE lease_id = ? AND status = 'ACTIVE'",
+                    (lease_id,),
+                )
+                conn.commit()
+                raise ValueError("lease expired before cancellation")
+            conn.execute(
+                "UPDATE task_leases SET status = 'CANCELLED' WHERE lease_id = ? AND status = 'ACTIVE'",
+                (lease_id,),
+            )
+            conn.commit()
+            return self._lease_dict(
+                conn.execute("SELECT * FROM task_leases WHERE lease_id = ?", (lease_id,)).fetchone()
+            )
+        except Exception:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
 
     def close(self) -> None:
         with self._connections_lock:

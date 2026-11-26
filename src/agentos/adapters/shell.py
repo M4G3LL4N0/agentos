@@ -113,10 +113,19 @@ class ShellAdapter:
             or params.get("timeout")
             or request.timeout_seconds
         )
-        env = dict(os.environ)
+        # The API server's bearer credentials must never reach task
+        # subprocesses, whether inherited from systemd or supplied in params.
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.upper().startswith("AGENTOS_API_")
+        }
         for key, value in (params.get("env") or {}).items():
-            env[str(key)] = str(value)
-        scrubbed = scrub_env({k: env.get(k, "") for k in (params.get("env") or {})})
+            name = str(key)
+            if name.upper().startswith("AGENTOS_API_"):
+                continue
+            env[name] = str(value)
+        scrubbed = scrub_env({k: str(v) for k, v in (params.get("env") or {}).items()})
 
         start = time.monotonic()
         try:
