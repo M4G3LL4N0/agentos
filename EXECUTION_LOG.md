@@ -10,11 +10,18 @@ entries are not permitted here.
   authentication and the plaintext loopback bind guard (commit
   `bdd960cb17249c364225394ceff7d4ce7eed71f2`). Updated-head CI passed on
   Python 3.11/3.12 and secret scan before PR #5 merged.
-- Added a Core systemd template, mode-0600 token-file generator, fixed-loopback
-  authenticated health check, runbook, and targeted deployment tests.
-- Local evidence: 6 focused tests pass, scripts compile, and
-  `systemd-analyze verify` passes with the release executable substituted
-  solely to validate unit syntax.
+- Added a Core systemd template with a per-release virtual environment,
+  mode-0600 generator for main/read/health-only tokens, systemd-active
+  preflight, fixed-loopback health check, runbook, and focused tests.
+- Independent reviewers found two issues before draft advancement: kit paths
+  were absent from the pinned base SHA, and the checker sent the write-capable
+  main token to localhost. The runbook now requires a reviewed post-merge
+  exact SHA; the checker sends only a GET /health-scoped token after systemd
+  reports the service active. The API response is wrapped as `ok: true` and
+  `healthy: true`, and both are checked.
+- Local evidence: 8 focused tests pass, scripts compile, and
+  `systemd-analyze verify` passes using a harmless executable substitution
+  for syntax checking. Updated PR CI and independent re-review are pending.
 - Not installed or live-verified. No server API task, Telegram delivery,
   Storage receipt, backup restore, or production deployment was performed.
 - APN operating score remains 1.3/5.
