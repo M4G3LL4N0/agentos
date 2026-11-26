@@ -223,6 +223,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_serve = sub.add_parser("serve", help="start the lightweight HTTP API")
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8765)
+    p_serve.add_argument(
+        "--control-only", action="store_true", default=None,
+        help="disable API routes that execute, delegate, verify or recover tasks",
+    )
 
     p_mcp = sub.add_parser("mcp", help="MCP candidate lifecycle (or serve stdio)")
     mcp_sub = p_mcp.add_subparsers(dest="mcp_command", required=False)
@@ -1246,7 +1250,10 @@ def _delegate_with_context(app, args, params, constraints, extra):
 def cmd_serve(app: AgentOS, args: argparse.Namespace, as_json: bool) -> int:
     from agentos.api import create_server
 
-    server = create_server(app, host=args.host, port=args.port)
+    server = create_server(
+        app, host=args.host, port=args.port,
+        control_only=getattr(args, "control_only", None),
+    )
     address = f"http://{args.host}:{server.server_address[1]}"
     if as_json:
         print(json.dumps({"ok": True, "endpoint": address}, indent=2))
