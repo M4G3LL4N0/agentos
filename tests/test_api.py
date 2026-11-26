@@ -170,7 +170,7 @@ class APITestCase(unittest.TestCase):
                 port=0,
                 read_token="r" * 40,
             )
-        with self.assertRaisesRegex(ValueError, "required when a scoped token"):
+        with self.assertRaisesRegex(ValueError, "required when a health-only token"):
             create_server(
                 self.app,
                 host="127.0.0.1",
