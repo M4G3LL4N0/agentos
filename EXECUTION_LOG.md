@@ -3,6 +3,23 @@
 Chronological record of what was actually built and run. Aspirational
 entries are not permitted here.
 
+## 2026-11-26 — Round 18 control-only API containment (PR #6 draft)
+
+- Added an opt-in control-only HTTP API mode. It accepts objective creation and
+  cancellation but rejects delegate/run/verify/recover with HTTP 403.
+- Added an API integration test that creates a shell objective, attempts all
+  blocked execution routes, checks a marker command never ran, and then cancels
+  the objective.
+- Set `AGENTOS_CONTROL_ONLY=1` in the Core systemd unit and added a unit test
+  requiring the flag. The runbook now states the boundary and residual risk.
+- Verification: pending updated-head GitHub Actions and independent security
+  review. No CI pass is claimed yet.
+- Not installed or live-verified. No Core, Forge, Storage, Telegram, firewall,
+  or production Vercel state changed. The Core-to-Forge lease/result path is
+  still not implemented; the API/task execution process split remains required
+  before any execution endpoint can be enabled.
+- APN operating score remains 1.3/5.
+
 ## 2026-11-25 — Round 15/16 APN integration and deployment kit
 
 - PR #4 merged the APN fleet contract (commit
