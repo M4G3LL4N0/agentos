@@ -2,6 +2,7 @@
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from agentos.adapters.base import ExecutionRequest
@@ -22,6 +23,32 @@ class TestShellAdapter(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("hello", result.output["stdout"])
         self.assertTrue(any(e.kind == "exit_code" for e in result.evidence))
+
+    def test_shell_worker_never_inherits_or_accepts_api_credentials(self) -> None:
+        names = (
+            "AGENTOS_API_TOKEN",
+            "AGENTOS_API_READ_TOKEN",
+            "AGENTOS_API_HEALTH_TOKEN",
+        )
+        command = (
+            'if [ -n "${AGENTOS_API_TOKEN-}${AGENTOS_API_READ_TOKEN-}'
+            '${AGENTOS_API_HEALTH_TOKEN-}" ]; then echo LEAKED; else echo SAFE; fi'
+        )
+        with patch.dict("os.environ", {name: "test-secret" for name in names}):
+            result = self.adapter.execute(
+                "shell.run",
+                ExecutionRequest(
+                    operation="shell.run",
+                    params={
+                        "command": command,
+                        "env": {"AGENTOS_API_HEALTH_TOKEN": "task-supplied-secret"},
+                    },
+                ),
+            )
+        self.assertTrue(result.ok)
+        self.assertEqual(result.output["stdout"].strip(), "SAFE")
+        self.assertNotIn("test-secret", result.output["stdout"])
+        self.assertNotIn("task-supplied-secret", str(result.output))
 
     def test_nonzero_exit_is_failure_not_success(self) -> None:
         result = self.adapter.execute(
