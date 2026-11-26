@@ -82,7 +82,8 @@ class APITestCase(unittest.TestCase):
                 headers={"Authorization": f"Bearer {health_token}"},
             )
             self.assertEqual(status, 200)
-            self.assertTrue(health["ok"])\n            self.assertTrue(health["healthy"])
+            self.assertTrue(health["ok"])
+            self.assertTrue(health["healthy"])
 
             status, _ = self.call(
                 "GET", "/status", base=base,
