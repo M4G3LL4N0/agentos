@@ -143,7 +143,10 @@ class APITestCase(unittest.TestCase):
     def test_control_only_mode_accepts_objective_intake_but_blocks_execution(self) -> None:
         import os
         from unittest.mock import patch
+        from agentos.cli import build_parser
 
+        self.assertTrue(build_parser().parse_args(["serve", "--control-only"]).control_only)
+        self.assertIsNone(build_parser().parse_args(["serve"]).control_only)
         marker = Path(self.tmp.name) / "should-not-run"
         with patch.dict(os.environ, {"AGENTOS_CONTROL_ONLY": "1"}):
             server = create_server(self.app, host="127.0.0.1", port=0)
