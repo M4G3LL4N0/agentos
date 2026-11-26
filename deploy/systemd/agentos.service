@@ -15,7 +15,7 @@ StateDirectoryMode=0750
 Environment=AGENTOS_HOME=/var/lib/agentos
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=/etc/agentos/agentos.env
-ExecStart=/opt/agentos/venv/bin/agentos serve --host 127.0.0.1 --port 8765
+ExecStart=/opt/agentos/current/.venv/bin/agentos serve --host 127.0.0.1 --port 8765
 Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=30s
