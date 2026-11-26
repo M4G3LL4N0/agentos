@@ -17,6 +17,7 @@ def create_env_file(path: str | Path) -> None:
         payload = (
             f"AGENTOS_API_TOKEN={secrets.token_hex(32)}\n"
             f"AGENTOS_API_READ_TOKEN={secrets.token_hex(32)}\n"
+            f"AGENTOS_API_HEALTH_TOKEN={secrets.token_hex(32)}\n"
         ).encode("ascii")
         with os.fdopen(fd, "wb", closefd=True) as stream:
             fd = -1
