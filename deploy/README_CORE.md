@@ -6,6 +6,8 @@
 
 This kit makes a first Core deployment repeatable and easier to audit. It does not provision a remote tunnel, modify a firewall, connect Forge or Storage, create Telegram messages, or claim that a fleet task has run.
 
+**Security deployment blocker:** do not install this service while the AgentOS process both holds `AGENTOS_API_*` credentials and can launch task-controlled shell commands. Filtering those variables from a child environment does not prevent a same-UID child from reading `/proc/<parent-pid>/environ`. The current unit does not isolate task execution into a separate OS identity. Before deployment, split authenticated API control from task execution across a separately restricted worker identity/process boundary and add a regression test proving the worker cannot read API credentials. The localhost bind and health-only token do not mitigate this local credential-exposure path.
+
 ## What it installs
 
 - A dedicated `agentos` service account.
