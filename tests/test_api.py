@@ -140,6 +140,46 @@ class APITestCase(unittest.TestCase):
             thread.join(timeout=5)
             server.server_close()
 
+    def test_control_only_mode_accepts_objective_intake_but_blocks_execution(self) -> None:
+        server = create_server(self.app, host="127.0.0.1", port=0, control_only=True)
+        thread = threading.Thread(
+            target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True
+        )
+        thread.start()
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            status, created = self.call(
+                "POST",
+                "/objectives",
+                {
+                    "title": "Queued shell task",
+                    "operation": "shell.run",
+                    "params": {"command": "touch /tmp/agentos-control-only-must-not-run"},
+                },
+                base=base,
+            )
+            self.assertEqual(status, 201)
+            objective_id = created["objective"]["id"]
+            for path, body in (
+                ("/delegate", {"title": "blocked delegate", "operation": "shell.run"}),
+                (f"/objectives/{objective_id}/run", {}),
+                (f"/objectives/{objective_id}/verify", {}),
+                (f"/objectives/{objective_id}/recover", {}),
+            ):
+                with self.subTest(path=path):
+                    status, payload = self.call("POST", path, body, base=base)
+                    self.assertEqual(status, 403)
+                    self.assertIn("control-only mode", payload["error"])
+            status, cancelled = self.call(
+                "POST", f"/objectives/{objective_id}/cancel", {}, base=base
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(cancelled["objective"]["status"], "CANCELLED")
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
+            server.server_close()
+
     def test_api_refuses_non_loopback_binds_and_validates_tokens(self) -> None:
         with self.assertRaisesRegex(ValueError, "only supports loopback"):
             create_server(self.app, host="0.0.0.0", port=0)
