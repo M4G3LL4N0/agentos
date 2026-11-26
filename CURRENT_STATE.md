@@ -18,13 +18,19 @@ Telegram. The released v0.5.0 tag remains unauthenticated. Main refuses
 non-loopback HTTP binds, so remote access requires a separately reviewed
 encrypted proxy. The merged code has not been released or deployed to Core 01.
 
-Round 16 adds a systemd unit, private credential-file generator, fixed-loopback
-health check, Core runbook, and focused tests. These are reviewable repository
-files only. They have not been installed or live-verified. No Core, Forge,
-Storage, Telegram, firewall, or private-network runtime was changed. The APN
-operating score remains 1.3/5 until authenticated live task execution,
-verification, archival receipt, Core reconciliation, Telegram delivery, and
-recovery are evidenced.
+Round 16 PR #6 adds a systemd unit, per-release virtual environment, private
+credential-file generator, health-only API token, service-active preflight,
+fixed-loopback health check, Core runbook, and focused tests. Independent
+review found and prompted fixes for a stale source pin and a main-token leak
+to a rogue local listener. The PR now installs only from an exact reviewed
+main commit containing the kit; the checker uses only a `/health`-scoped
+token and refuses to read it unless systemd reports the service active. These
+changes are still draft-only and have not been installed or live-verified.
+The actual `/health` response wraps the route payload as `ok: true` and
+`healthy: true`; the checker validates both. No Core, Forge, Storage, Telegram,
+firewall, or private-network runtime was changed. The APN operating score
+remains 1.3/5 until authenticated live task execution, verification, archival
+receipt, Core reconciliation, Telegram delivery, and recovery are evidenced.
 
 
 ## Status: genuinely useful universal Agent Engine (local)
