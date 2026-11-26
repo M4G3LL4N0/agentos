@@ -230,9 +230,12 @@ Zero-cost mission; additive; nothing rebuilt. Full detail in
 - [x] APN fleet contract merged through PR #4.
 - [x] Authenticated loopback HTTP API merged through PR #5; updated-head Python
   3.11/3.12 CI and secret scan passed.
-- [x] Prepare systemd unit, private token generator, fixed-loopback health
-  check, Core runbook, and focused deployment tests.
-- [ ] Independent security review and post-merge CI confirmation.
+- [x] Prepare systemd unit, per-release virtual environment, three scoped
+  tokens, fixed-loopback health check, Core runbook, and focused tests.
+- [x] Remediate independent-review findings: require a merged exact-SHA
+  checkout containing the kit; make the health token GET /health-only; verify
+  systemd active before the probe reads or sends that token.
+- [ ] Re-review final diff and pass CI on the updated PR head.
 - [ ] Install and live-verify on Core 01 with an authorized operator.
 - [ ] Prove Core lease → Forge worker → independent verifier → Storage receipt
   → Core reconciliation → Telegram receipt, including failure/recovery.
