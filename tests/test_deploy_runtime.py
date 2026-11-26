@@ -63,8 +63,11 @@ class DeploymentRuntimeTests(unittest.TestCase):
         self.assertIn("--user-group", RUNBOOK)
         self.assertIn("systemctl restart agentos.service", RUNBOOK)
         self.assertIn("systemctl show -p MainPID -p ExecStart", RUNBOOK)
+        self.assertIn("rev-parse HEAD", RUNBOOK)
+        self.assertIn("mv -Tf", RUNBOOK)
+        self.assertIn("OLD_TARGET=", RUNBOOK)
         self.assertIn(".venv/bin/pip", RUNBOOK)
-        self.assertIn("old process is not proof", RUNBOOK)
+        self.assertIn("Confirm the recorded MainPID/ExecStart", RUNBOOK)
 
     def test_living_docs_distinguish_merged_code_from_undone_live_deployment(self):
         self.assertIn("Round 15/16", CURRENT_STATE)
