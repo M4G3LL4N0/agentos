@@ -141,8 +141,13 @@ class APITestCase(unittest.TestCase):
             server.server_close()
 
     def test_control_only_mode_accepts_objective_intake_but_blocks_execution(self) -> None:
+        import os
+        from unittest.mock import patch
+
         marker = Path(self.tmp.name) / "should-not-run"
-        server = create_server(self.app, host="127.0.0.1", port=0, control_only=True)
+        with patch.dict(os.environ, {"AGENTOS_CONTROL_ONLY": "1"}):
+            server = create_server(self.app, host="127.0.0.1", port=0)
+        self.assertTrue(server.control_only)
         thread = threading.Thread(
             target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True
         )
