@@ -2,7 +2,6 @@
 
 Living document — evolves with discoveries during implementation.
 Updated 2026-11-25 (AgentOS v0.5.0 release gate PASS; APN contract and API auth merged; Core deployment kit prepared but not installed).
-kernel, 710 tests; local release gate PASS; publication preparation in progress).
 
 ## COMPLETE
 
