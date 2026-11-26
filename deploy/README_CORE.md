@@ -34,12 +34,15 @@ sudo useradd --system --user-group --home-dir /nonexistent --shell /usr/sbin/nol
 sudo install -d -o root -g root -m 0755 /opt/agentos/releases /etc/agentos
 sudo git clone https://github.com/M4G3LL4N0/agentos.git "/opt/agentos/releases/$REV"
 sudo git -C "/opt/agentos/releases/$REV" checkout --detach "$REV"
+CHECKED_OUT="$(sudo git -C "/opt/agentos/releases/$REV" rev-parse HEAD)"
+test "$CHECKED_OUT" = "$REV"
 sudo test -f "/opt/agentos/releases/$REV/scripts/create-agentos-secrets.py"
 sudo test -f "/opt/agentos/releases/$REV/deploy/systemd/agentos.service"
 sudo test -f "/opt/agentos/releases/$REV/scripts/agentos-healthcheck.py"
 sudo python3 -m venv "/opt/agentos/releases/$REV/.venv"
 sudo "/opt/agentos/releases/$REV/.venv/bin/pip" install "/opt/agentos/releases/$REV"
-sudo ln -sfn "/opt/agentos/releases/$REV" /opt/agentos/current
+sudo ln -s "/opt/agentos/releases/$REV" "/opt/agentos/.current.$REV.next"
+sudo mv -Tf "/opt/agentos/.current.$REV.next" /opt/agentos/current
 sudo /usr/bin/python3 /opt/agentos/current/scripts/create-agentos-secrets.py
 sudo install -o root -g root -m 0644 /opt/agentos/current/deploy/systemd/agentos.service /etc/systemd/system/agentos.service
 sudo systemctl daemon-reload
@@ -49,7 +52,17 @@ sudo /usr/bin/python3 /opt/agentos/current/scripts/agentos-healthcheck.py
 
 The source and per-release virtual environment are root-owned and read-only to the service account. `StateDirectory=agentos` gives the service its persistent writable state at `/var/lib/agentos`. The environment file is root-owned and readable only by root/systemd; the process receives the tokens through its service environment.
 
-This outline is for a first install. For an upgrade, prepare the new exact-SHA release and its `.venv` without changing the live pointer. Record and validate the current `/opt/agentos/current` target as the rollback release, then atomically switch the pointer and run `systemctl restart agentos.service`. Check `systemctl show -p MainPID -p ExecStart agentos.service` and the authenticated health check before calling the new release active. A healthy response from an old process is not proof that the new release is active. If the upgrade fails, restore the prior pointer and restart; keep both per-release virtual environments for rollback.
+This outline is for a first install. For an upgrade, prepare the new exact-SHA release and its `.venv` without changing the live pointer. Record and validate the current target with `OLD_TARGET="$(readlink -f /opt/agentos/current)"`; retain that release and its `.venv`. Create a temporary symlink in `/opt/agentos` and atomically replace `current` with same-directory rename:
+
+```sh
+sudo ln -s "/opt/agentos/releases/$REV" "/opt/agentos/.current.$REV.next"
+sudo mv -Tf "/opt/agentos/.current.$REV.next" /opt/agentos/current
+sudo systemctl restart agentos.service
+sudo systemctl show -p MainPID -p ExecStart agentos.service
+sudo /usr/bin/python3 /opt/agentos/current/scripts/agentos-healthcheck.py
+```
+
+Confirm the recorded MainPID/ExecStart and authenticated health response before calling the new release active. The checker also requires `agentos.service` active before sending its health-only token. If the upgrade fails, atomically point `current` back to `$OLD_TARGET` using a new temporary symlink and `mv -Tf`, then restart and verify. Keep both per-release virtual environments for rollback.
 
 ## Verify and recover
 
