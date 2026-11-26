@@ -275,8 +275,10 @@ def create_server(
     _validate_api_token(auth_token, "AGENTOS_API_TOKEN")
     _validate_api_token(read_token, "AGENTOS_API_READ_TOKEN")
     _validate_api_token(health_token, "AGENTOS_API_HEALTH_TOKEN")
-    if (read_token is not None or health_token is not None) and auth_token is None:
-        raise ValueError("AGENTOS_API_TOKEN is required when a scoped token is configured")
+    if read_token is not None and auth_token is None:
+        raise ValueError("AGENTOS_API_TOKEN is required when a read-only token is configured")
+    if health_token is not None and auth_token is None:
+        raise ValueError("AGENTOS_API_TOKEN is required when a health-only token is configured")
     if not _is_loopback_host(host):
         raise ValueError(
             "AgentOS HTTP API only supports loopback binds; use a TLS/private-network proxy for remote access"
