@@ -141,6 +141,7 @@ class APITestCase(unittest.TestCase):
             server.server_close()
 
     def test_control_only_mode_accepts_objective_intake_but_blocks_execution(self) -> None:
+        marker = Path(self.tmp.name) / "should-not-run"
         server = create_server(self.app, host="127.0.0.1", port=0, control_only=True)
         thread = threading.Thread(
             target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True
@@ -154,7 +155,7 @@ class APITestCase(unittest.TestCase):
                 {
                     "title": "Queued shell task",
                     "operation": "shell.run",
-                    "params": {"command": "touch /tmp/agentos-control-only-must-not-run"},
+                    "params": {"command": f"touch {marker}"},
                 },
                 base=base,
             )
@@ -170,6 +171,7 @@ class APITestCase(unittest.TestCase):
                     status, payload = self.call("POST", path, body, base=base)
                     self.assertEqual(status, 403)
                     self.assertIn("control-only mode", payload["error"])
+            self.assertFalse(marker.exists(), "control-only route executed a shell task")
             status, cancelled = self.call(
                 "POST", f"/objectives/{objective_id}/cancel", {}, base=base
             )
