@@ -31,6 +31,7 @@ The AgentOS read-only token authorizes all current GET routes. Do not give it to
 Run these steps only after PR #6 is independently reviewed and merged. Set `REV` to the exact full SHA of the reviewed main commit containing the kit and the authenticated API. These are instructions for an operator; this change does not execute them.
 
 ```sh
+set -eu
 REV=<approved-merged-main-commit-sha>
 sudo useradd --system --user-group --home-dir /nonexistent --shell /usr/sbin/nologin agentos
 sudo install -d -o root -g root -m 0755 /opt/agentos/releases /etc/agentos
