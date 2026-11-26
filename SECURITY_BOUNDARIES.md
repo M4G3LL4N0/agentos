@@ -51,13 +51,14 @@ evidenced approval.
 - Released v0.5.0: HTTP API, MCP, and A2A are **unauthenticated**; keep
   them on loopback. Authenticated HTTP API code is merged to main (PR #5) but
   has not been released or deployed. It accepts a main bearer token and an
-  optional GET-only token. The plaintext stdlib server refuses non-loopback
-  binds. Remote access requires a separately reviewed TLS or encrypted
-  private-network proxy that forwards to the loopback listener. The read-only
-  token can access every existing GET route; it provides no per-route scope,
-  identity, or data redaction. Do not share it with Vercel or Telegram. The
-  Core kit can generate 256-bit tokens in a mode-0600 file, but is not
-  installed. MCP/A2A remain loopback-only.
+  optional GET-only token. Draft PR #6 adds a third token authorized only for
+  GET /health; it is not in main and must not be treated as deployed. The
+  plaintext stdlib server refuses non-loopback binds. Remote access requires
+  a separately reviewed TLS or encrypted private-network proxy. The existing
+  read-only token still covers every GET route; do not share it with Vercel or
+  Telegram. The health checker sends only the health-scoped token, and only
+  after confirming the systemd service is active. The kit is not installed.
+  MCP/A2A remain loopback-only.
 - The repo keeps secrets out by guardrail (patterns), not by secret
   storage; do not put real keys in job params or logs.
 ## Fabric trust update (IMPLEMENTED, 2026-09-22)
