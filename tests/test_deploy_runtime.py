@@ -43,6 +43,7 @@ class DeploymentRuntimeTests(unittest.TestCase):
         self.assertIn("/opt/agentos/current/.venv/bin/agentos", UNIT)
         self.assertIn("EnvironmentFile=/etc/agentos/agentos.env", UNIT)
         self.assertIn("--host 127.0.0.1 --port 8765", UNIT)
+        self.assertIn("--control-only", UNIT)
         self.assertNotIn("0.0.0.0", UNIT)
         self.assertIn("NoNewPrivileges=yes", UNIT)
         self.assertIn("ProtectSystem=strict", UNIT)
