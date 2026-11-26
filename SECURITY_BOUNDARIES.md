@@ -71,3 +71,8 @@ evidenced approval.
 - Cell configs with credential-looking values are rejected, never stored.
 - MCP approval registers unavailable metadata (transport DEFERRED), never
   a live executor. No secrets in JobEnvelope (rejected at ingest).
+
+
+## Round 18 — Core API control-only deployment gate (draft)
+
+The proposed systemd service sets `AGENTOS_CONTROL_ONLY=1`. In this mode the API can accept/cancel objectives but blocks `/delegate`, `/run`, `/verify`, and `/recover` with HTTP 403. This prevents API clients from launching task-controlled shell commands in the same-UID process that holds API credentials. Child environment filtering does not block `/proc/<parent-pid>/environ`; the leak remains a latent risk if a task-execution endpoint is enabled or the flag is removed. This is containment, not a separate worker identity or Core-to-Forge lease path. Keep the PR in draft and do not enable execution until a separately restricted worker/typed interface is implemented and reviewed. No deployment is claimed.
