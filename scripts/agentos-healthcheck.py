@@ -8,6 +8,7 @@ import json
 import os
 import re
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ HEALTH_PATH = "/health"
 _TOKEN = re.compile(r"^[0-9a-f]{64}$")
 
 
-def load_api_token(path: str | Path) -> str:
+def load_health_token(path: str | Path) -> str:
     target = Path(path)
     info = target.lstat()
     if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) & 0o077:
@@ -30,18 +31,34 @@ def load_api_token(path: str | Path) -> str:
             if not line or line.startswith("#"):
                 continue
             key, separator, value = line.partition("=")
-            if not separator or key not in {"AGENTOS_API_TOKEN", "AGENTOS_API_READ_TOKEN"}:
+            if not separator or key not in {"AGENTOS_API_TOKEN", "AGENTOS_API_READ_TOKEN", "AGENTOS_API_HEALTH_TOKEN"}:
                 raise ValueError("credential file contains an unsupported entry")
             if key in values:
                 raise ValueError("credential file contains a duplicate key")
             values[key] = value
-    token = values.get("AGENTOS_API_TOKEN", "")
+    token = values.get("AGENTOS_API_HEALTH_TOKEN", "")
     if not _TOKEN.fullmatch(token):
-        raise ValueError("credential file has no valid main API token")
-    for key in ("AGENTOS_API_TOKEN", "AGENTOS_API_READ_TOKEN"):
+        raise ValueError("credential file has no valid health API token")
+    for key in ("AGENTOS_API_TOKEN", "AGENTOS_API_READ_TOKEN", "AGENTOS_API_HEALTH_TOKEN"):
         if key in values and not _TOKEN.fullmatch(values[key]):
             raise ValueError("credential file contains an invalid API token")
     return token
+
+
+def service_is_active(timeout: float = 3.0) -> bool:
+    """Avoid sending even the health-only token when systemd has no service."""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/systemctl", "is-active", "--quiet", "agentos.service"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
 
 
 def check_health(token: str, timeout: float = 3.0) -> bool:
@@ -59,7 +76,7 @@ def check_health(token: str, timeout: float = 3.0) -> bool:
             if response.status != 200:
                 return False
             payload = json.loads(response.read(16_384).decode("utf-8"))
-            return isinstance(payload, dict) and payload.get("healthy") is True
+            return isinstance(payload, dict) and payload.get("ok") is True and payload.get("healthy") is True
         finally:
             response.close()
     except (OSError, http.client.HTTPException, ValueError, UnicodeDecodeError):
@@ -72,8 +89,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--env-file", default="/etc/agentos/agentos.env")
     args = parser.parse_args()
+    if not service_is_active():
+        print("AgentOS loopback health: FAIL (systemd service is not active)", file=sys.stderr)
+        return 1
     try:
-        token = load_api_token(args.env_file)
+        token = load_health_token(args.env_file)
     except (OSError, ValueError):
         print("AgentOS loopback health: FAIL (credential file unavailable or invalid)", file=sys.stderr)
         return 1
