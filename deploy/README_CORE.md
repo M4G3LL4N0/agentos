@@ -6,13 +6,14 @@
 
 This kit makes a first Core deployment repeatable and easier to audit. It does not provision a remote tunnel, modify a firewall, connect Forge or Storage, create Telegram messages, or claim that a fleet task has run.
 
-**Security deployment blocker:** do not install this service while the AgentOS process both holds `AGENTOS_API_*` credentials and can launch task-controlled shell commands. Filtering those variables from a child environment does not prevent a same-UID child from reading `/proc/<parent-pid>/environ`. The current unit does not isolate task execution into a separate OS identity. Before deployment, split authenticated API control from task execution across a separately restricted worker identity/process boundary and add a regression test proving the worker cannot read API credentials. The localhost bind and health-only token do not mitigate this local credential-exposure path.
+**Control-only containment:** the systemd unit sets `AGENTOS_CONTROL_ONLY=1`. In that mode, the authenticated API may accept and cancel objectives, but it rejects `/delegate`, `/run`, `/verify`, and `/recover` with HTTP 403. This prevents an API caller from launching task-controlled shell commands in the token-bearing AgentOS process. Filtering `AGENTOS_API_*` from child environments is only defense in depth: a same-UID child can still inspect `/proc/<parent-pid>/environ`. Keep the control-only flag enabled and do not add or enable any API execution route until execution moves behind a separately restricted worker identity and typed lease/result interface with adversarial tests. Objectives accepted by this stage are records only; the Core-to-Forge lease path is not implemented.
 
 ## What it installs
 
 - A dedicated `agentos` service account.
 - The pinned AgentOS source in a root-owned release directory and a per-release Python virtual environment.
 - A systemd service with a private writable state directory, bounded restart policy, and standard Linux hardening.
+- A control-only API mode enforced by the service unit; task execution, delegation, verification, and recovery are blocked until a separate worker boundary exists.
 - Separate high-entropy `AGENTOS_API_TOKEN`, broad `AGENTOS_API_READ_TOKEN`, and `/health`-only `AGENTOS_API_HEALTH_TOKEN` values in `/etc/agentos/agentos.env`, created with mode `0600` and never printed.
 - A health checker that first confirms `agentos.service` is active, then uses only the `/health`-scoped token against fixed `127.0.0.1:8765`. It bypasses proxies and does not follow redirects.
 
@@ -24,7 +25,7 @@ The AgentOS read-only token authorizes all current GET routes. Do not give it to
 2. Confirm a restorable backup of Core state and available disk space. Keep the existing installation intact as a rollback target.
 3. Confirm the service account and system paths do not already exist, or adapt the steps after inspection. The install command uses `--user-group` because the unit requires the matching `agentos` group.
 4. Keep the API bound to loopback. Do not open port 8765 in a firewall or bind it to a public/private interface. Remote access requires a separately reviewed encrypted private transport and per-action authorization.
-5. Do not enable unattended task execution from the API. The first deployment gate is authenticated health/status only.
+5. Keep `AGENTOS_CONTROL_ONLY=1` in the systemd unit. This stage supports authenticated health/status plus objective intake/cancellation only. Run, delegate, verify, and recover API routes must return HTTP 403. Do not remove this control-only gate until the separate Forge worker and lease/result interface pass security review.
 
 ## Install outline (Core 01 only)
 
@@ -49,6 +50,8 @@ sudo mv -Tf "/opt/agentos/.current.$REV.next" /opt/agentos/current
 sudo /usr/bin/python3 /opt/agentos/current/scripts/create-agentos-secrets.py
 sudo install -o root -g root -m 0644 /opt/agentos/current/deploy/systemd/agentos.service /etc/systemd/system/agentos.service
 sudo systemctl daemon-reload
+# Verify this unit's control-only drop-in before starting the credential-bearing API.
+sudo systemctl cat agentos.service | grep -F 'Environment=AGENTOS_CONTROL_ONLY=1'
 sudo systemctl enable --now agentos.service
 sudo /usr/bin/python3 /opt/agentos/current/scripts/agentos-healthcheck.py
 ```
@@ -58,6 +61,7 @@ The source and per-release virtual environment are root-owned and read-only to t
 This outline is for a first install. For an upgrade, prepare the new exact-SHA release and its `.venv` without changing the live pointer. Record and validate the current target with `OLD_TARGET="$(readlink -f /opt/agentos/current)"`; retain that release and its `.venv`. Create a temporary symlink in `/opt/agentos` and atomically replace `current` with same-directory rename:
 
 ```sh
+set -eu
 sudo ln -s "/opt/agentos/releases/$REV" "/opt/agentos/.current.$REV.next"
 sudo mv -Tf "/opt/agentos/.current.$REV.next" /opt/agentos/current
 sudo systemctl restart agentos.service
