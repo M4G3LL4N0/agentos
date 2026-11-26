@@ -21,7 +21,7 @@ entries are not permitted here.
   `healthy: true`, and both are checked.
 - Local evidence: 8 focused tests pass, scripts compile, and
   `systemd-analyze verify` passes using a harmless executable substitution
-  for syntax checking. Updated PR CI and independent re-review are pending.
+  for syntax checking. Updated-head CI and independent re-review are pending.
 - Not installed or live-verified. No server API task, Telegram delivery,
   Storage receipt, backup restore, or production deployment was performed.
 - APN operating score remains 1.3/5.
