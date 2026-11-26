@@ -32,6 +32,14 @@ firewall, or private-network runtime was changed. The APN operating score
 remains 1.3/5 until authenticated live task execution, verification, archival
 receipt, Core reconciliation, Telegram delivery, and recovery are evidenced.
 
+Round 18 adds an explicit control-only mode to the draft: the systemd unit sets
+`AGENTOS_CONTROL_ONLY=1`; objective intake/cancellation remain available, while
+delegate/run/verify/recover routes return HTTP 403. The API regression test
+submits a shell objective and confirms no marker command ran. This is a bounded
+containment mode, not worker isolation: same-UID `/proc` access remains a latent
+risk if any task-execution path is enabled. The Core-to-Forge lease/result path
+is still absent. PR #6 remains draft; new-head CI is pending; nothing is installed.
+
 
 ## Status: genuinely useful universal Agent Engine (local)
 
