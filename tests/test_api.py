@@ -61,11 +61,13 @@ class APITestCase(unittest.TestCase):
 
         write_token = "w" * 40
         read_token = "r" * 40
+        health_token = "h" * 40
         with patch.dict(
             os.environ,
             {
                 "AGENTOS_API_TOKEN": write_token,
                 "AGENTOS_API_READ_TOKEN": read_token,
+                "AGENTOS_API_HEALTH_TOKEN": health_token,
             },
         ):
             server = create_server(self.app, host="127.0.0.1", port=0)
@@ -75,6 +77,24 @@ class APITestCase(unittest.TestCase):
         thread.start()
         base = f"http://127.0.0.1:{server.server_address[1]}"
         try:
+            status, health = self.call(
+                "GET", "/health", base=base,
+                headers={"Authorization": f"Bearer {health_token}"},
+            )
+            self.assertEqual(status, 200)
+            self.assertTrue(health["healthy"])
+
+            status, _ = self.call(
+                "GET", "/status", base=base,
+                headers={"Authorization": f"Bearer {health_token}"},
+            )
+            self.assertEqual(status, 401)
+            status, _ = self.call(
+                "POST", "/objectives", {"title": "must stay blocked"},
+                base=base, headers={"Authorization": f"Bearer {health_token}"},
+            )
+            self.assertEqual(status, 401)
+
             status, payload = self.call("GET", "/status", base=base)
             self.assertEqual(status, 401)
             self.assertEqual(payload["error"], "authentication required")
@@ -149,6 +169,13 @@ class APITestCase(unittest.TestCase):
                 host="127.0.0.1",
                 port=0,
                 read_token="r" * 40,
+            )
+        with self.assertRaisesRegex(ValueError, "required when a scoped token"):
+            create_server(
+                self.app,
+                host="127.0.0.1",
+                port=0,
+                health_token="h" * 40,
             )
 
     def test_health_and_status(self) -> None:
