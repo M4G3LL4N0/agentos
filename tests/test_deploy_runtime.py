@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import os
 import re
 import stat
 import tempfile
 import unittest
 from pathlib import Path
+from contextlib import redirect_stderr
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +39,7 @@ class DeploymentRuntimeTests(unittest.TestCase):
         self.assertIn("Group=agentos", UNIT)
         self.assertIn("StateDirectory=agentos", UNIT)
         self.assertIn("Environment=AGENTOS_HOME=/var/lib/agentos", UNIT)
+        self.assertIn("/opt/agentos/current/.venv/bin/agentos", UNIT)
         self.assertIn("EnvironmentFile=/etc/agentos/agentos.env", UNIT)
         self.assertIn("--host 127.0.0.1 --port 8765", UNIT)
         self.assertNotIn("0.0.0.0", UNIT)
@@ -49,10 +52,19 @@ class DeploymentRuntimeTests(unittest.TestCase):
     def test_runbook_pins_release_and_keeps_remote_access_out_of_scope(self):
         self.assertIn("Status:** reviewable packaging only; not installed on Core 01", RUNBOOK)
         self.assertIn("bdd960cb17249c364225394ceff7d4ce7eed71f2", RUNBOOK)
+        self.assertIn("REV=<approved-merged-main-commit-sha>", RUNBOOK)
+        self.assertIn("only available in PR #6", RUNBOOK)
+        self.assertIn("AGENTOS_API_HEALTH_TOKEN", RUNBOOK)
+        self.assertIn("then uses only the `/health`-scoped token", RUNBOOK)
         self.assertIn("Do not give it to Vercel, Telegram", RUNBOOK)
         self.assertIn("Do not open port 8765", RUNBOOK)
         self.assertIn("Core lease", RUNBOOK)
         self.assertIn("Telegram delivery receipt", RUNBOOK)
+        self.assertIn("--user-group", RUNBOOK)
+        self.assertIn("systemctl restart agentos.service", RUNBOOK)
+        self.assertIn("systemctl show -p MainPID -p ExecStart", RUNBOOK)
+        self.assertIn(".venv/bin/pip", RUNBOOK)
+        self.assertIn("old process is not proof", RUNBOOK)
 
     def test_living_docs_distinguish_merged_code_from_undone_live_deployment(self):
         self.assertIn("Round 15/16", CURRENT_STATE)
@@ -70,9 +82,9 @@ class DeploymentRuntimeTests(unittest.TestCase):
             self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
             text = path.read_text(encoding="ascii")
             values = dict(line.split("=", 1) for line in text.splitlines())
-            self.assertEqual(set(values), {"AGENTOS_API_TOKEN", "AGENTOS_API_READ_TOKEN"})
+            self.assertEqual(set(values), {"AGENTOS_API_TOKEN", "AGENTOS_API_READ_TOKEN", "AGENTOS_API_HEALTH_TOKEN"})
             self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}", value) for value in values.values()))
-            self.assertNotEqual(values["AGENTOS_API_TOKEN"], values["AGENTOS_API_READ_TOKEN"])
+            self.assertEqual(len(set(values.values())), 3)
             original = path.read_bytes()
             with self.assertRaises(FileExistsError):
                 SECRETS.create_env_file(path)
@@ -81,9 +93,9 @@ class DeploymentRuntimeTests(unittest.TestCase):
     def test_healthcheck_reads_private_file_and_calls_only_fixed_loopback(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "agentos.env"
-            path.write_text("AGENTOS_API_TOKEN=" + "a" * 64 + "\n", encoding="ascii")
+            path.write_text("AGENTOS_API_HEALTH_TOKEN=" + "a" * 64 + "\n", encoding="ascii")
             path.chmod(0o600)
-            self.assertEqual(HEALTH.load_api_token(path), "a" * 64)
+            self.assertEqual(HEALTH.load_health_token(path), "a" * 64)
             captured = {}
 
             class Response:
@@ -91,7 +103,7 @@ class DeploymentRuntimeTests(unittest.TestCase):
                 def close(self): return None
                 def read(self, limit):
                     captured["read_limit"] = limit
-                    return b'{"healthy":true,"version":"0.5.0"}'
+                    return b'{"ok":true,"healthy":true,"version":"0.5.0"}'
 
             class Connection:
                 def __init__(self, host, port, timeout):
@@ -115,6 +127,21 @@ class DeploymentRuntimeTests(unittest.TestCase):
             self.assertEqual(captured["timeout"], 3.0)
             self.assertEqual(captured["read_limit"], 16_384)
 
+    def test_healthcheck_requires_active_systemd_unit_before_auth(self):
+        from types import SimpleNamespace
+        import sys
+
+        with patch.object(HEALTH.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
+            self.assertTrue(HEALTH.service_is_active())
+            self.assertEqual(run.call_args.args[0], ["/usr/bin/systemctl", "is-active", "--quiet", "agentos.service"])
+        with patch.object(HEALTH.subprocess, "run", return_value=SimpleNamespace(returncode=3)):
+            self.assertFalse(HEALTH.service_is_active())
+        with patch.object(HEALTH, "service_is_active", return_value=False), \
+             patch.object(HEALTH, "load_health_token", side_effect=AssertionError("token must not be read")), \
+             patch.object(sys, "argv", ["agentos-healthcheck"]):
+            with redirect_stderr(io.StringIO()):
+                self.assertEqual(HEALTH.main(), 1)
+
     def test_healthcheck_rejects_unhealthy_api_response(self):
         class Response:
             status = 200
@@ -133,15 +160,15 @@ class DeploymentRuntimeTests(unittest.TestCase):
     def test_healthcheck_rejects_broad_file_permissions_symlinks_and_invalid_token(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "agentos.env"
-            path.write_text("AGENTOS_API_TOKEN=" + "b" * 64 + "\n", encoding="ascii")
+            path.write_text("AGENTOS_API_HEALTH_TOKEN=" + "b" * 64 + "\n", encoding="ascii")
             path.chmod(0o644)
             with self.assertRaises(ValueError):
-                HEALTH.load_api_token(path)
+                HEALTH.load_health_token(path)
             path.chmod(0o600)
             link = Path(tmp) / "link.env"
             link.symlink_to(path)
             with self.assertRaises((OSError, ValueError)):
-                HEALTH.load_api_token(link)
+                HEALTH.load_health_token(link)
             with self.assertRaises(ValueError):
                 HEALTH.check_health("short")
 
