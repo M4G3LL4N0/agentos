@@ -190,6 +190,23 @@ class APITestCase(unittest.TestCase):
             thread.join(timeout=5)
             server.server_close()
 
+    def test_control_only_cli_flag_overrides_disabled_environment(self) -> None:
+        import os
+        from unittest.mock import Mock, patch
+        from agentos.cli import build_parser, cmd_serve
+
+        args = build_parser().parse_args(["serve", "--control-only"])
+        server = Mock()
+        server.server_address = ("127.0.0.1", 8765)
+        server.serve_forever.side_effect = KeyboardInterrupt
+        with patch.dict(os.environ, {"AGENTOS_CONTROL_ONLY": "0"}), patch(
+            "agentos.api.create_server", return_value=server
+        ) as create_server:
+            self.assertEqual(cmd_serve(self.app, args, False), 0)
+        self.assertIs(create_server.call_args.kwargs["control_only"], True)
+        server.server_close.assert_called_once()
+
+
     def test_api_refuses_non_loopback_binds_and_validates_tokens(self) -> None:
         with self.assertRaisesRegex(ValueError, "only supports loopback"):
             create_server(self.app, host="0.0.0.0", port=0)
