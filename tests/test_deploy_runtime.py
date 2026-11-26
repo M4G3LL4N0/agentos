@@ -39,6 +39,7 @@ class DeploymentRuntimeTests(unittest.TestCase):
         self.assertIn("Group=agentos", UNIT)
         self.assertIn("StateDirectory=agentos", UNIT)
         self.assertIn("Environment=AGENTOS_HOME=/var/lib/agentos", UNIT)
+        self.assertIn("Environment=AGENTOS_CONTROL_ONLY=1", UNIT)
         self.assertIn("/opt/agentos/current/.venv/bin/agentos", UNIT)
         self.assertIn("EnvironmentFile=/etc/agentos/agentos.env", UNIT)
         self.assertIn("--host 127.0.0.1 --port 8765", UNIT)
